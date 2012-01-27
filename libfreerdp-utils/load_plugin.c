@@ -22,6 +22,7 @@
 #include <string.h>
 #include <freerdp/utils/print.h>
 #include <freerdp/utils/load_plugin.h>
+#include "freerdp_config.h"
 
 #ifdef _WIN32
 

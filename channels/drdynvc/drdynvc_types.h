@@ -20,7 +20,7 @@
 #ifndef __DRDYNVC_TYPES_H
 #define __DRDYNVC_TYPES_H
 
-#include "config.h"
+#include "freerdp_config.h"
 #include <freerdp/dvc.h>
 #include <freerdp/types.h>
 #include <freerdp/utils/debug.h>

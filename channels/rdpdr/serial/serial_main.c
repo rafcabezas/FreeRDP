@@ -23,7 +23,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include "config.h"
+#include "freerdp_config.h"
 
 #ifdef HAVE_SYS_MODEM_H
 #include <sys/modem.h>

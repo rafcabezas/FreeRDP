@@ -21,7 +21,7 @@
 #ifndef __RDPDR_TYPES_H
 #define __RDPDR_TYPES_H
 
-#include "config.h"
+#include "freerdp_config.h"
 #include <freerdp/utils/stream.h>
 #include <freerdp/utils/list.h>
 #include <freerdp/utils/svc_plugin.h>

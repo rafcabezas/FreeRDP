@@ -443,16 +443,22 @@ static boolean rdpsnd_load_device_plugin(rdpsndPlugin* rdpsnd, const char* name,
 	PFREERDP_RDPSND_DEVICE_ENTRY entry;
 	char* fullname;
 
-	if (strrchr(name, '.') != NULL)
-		entry = (PFREERDP_RDPSND_DEVICE_ENTRY)freerdp_load_plugin(name, RDPSND_DEVICE_EXPORT_FUNC_NAME);
-	else
-	{
-		fullname = xzalloc(strlen(name) + 8);
-		strcpy(fullname, "rdpsnd_");
-		strcat(fullname, name);
-		entry = (PFREERDP_RDPSND_DEVICE_ENTRY)freerdp_load_plugin(fullname, RDPSND_DEVICE_EXPORT_FUNC_NAME);
-		xfree(fullname);
-	}
+    if (strcmp(name, "iOS") != 0)//Remoter
+    {
+        if (strrchr(name, '.') != NULL)
+            entry = (PFREERDP_RDPSND_DEVICE_ENTRY)freerdp_load_plugin(name, RDPSND_DEVICE_EXPORT_FUNC_NAME);
+        else
+        {
+            fullname = xzalloc(strlen(name) + 8);
+            strcpy(fullname, "rdpsnd_");
+            strcat(fullname, name);
+            entry = (PFREERDP_RDPSND_DEVICE_ENTRY)freerdp_load_plugin(fullname, RDPSND_DEVICE_EXPORT_FUNC_NAME);
+            xfree(fullname);
+        }
+    }
+    else 
+        entry = (PFREERDP_RDPSND_DEVICE_ENTRY)FreeRDPRdpsndDeviceEntry_iOS;//Remoter
+    
 	if (entry == NULL)
 	{
 		return false;

@@ -22,7 +22,7 @@
 #include <sys/time.h>
 #endif
 
-#include "config.h"
+#include "freerdp_config.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>

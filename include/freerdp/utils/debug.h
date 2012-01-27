@@ -20,7 +20,7 @@
 #ifndef __UTILS_DEBUG_H
 #define __UTILS_DEBUG_H
 
-#include "config.h"
+#include "freerdp_config.h"
 
 #include <stdio.h>
 

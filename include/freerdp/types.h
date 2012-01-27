@@ -21,6 +21,8 @@
 #ifndef __RDP_TYPES_H
 #define __RDP_TYPES_H
 
+#include "freerdp_config.h"
+
 #ifdef _WIN32
 #include <WinDef.h>
 #endif

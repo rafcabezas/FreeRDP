@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-#include "config.h"
+#include "freerdp_config.h"
 #include "capabilities.h"
 #include <freerdp/utils/memory.h>
 

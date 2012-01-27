@@ -20,7 +20,7 @@
 #ifndef __RFX_TYPES_H
 #define __RFX_TYPES_H
 
-#include "config.h"
+#include "freerdp_config.h"
 #include <freerdp/utils/debug.h>
 #include <freerdp/utils/profiler.h>
 

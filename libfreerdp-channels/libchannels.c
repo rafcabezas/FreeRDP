@@ -32,7 +32,7 @@
  * from the main thread.
  */
 
-#include "config.h"
+#include "freerdp_config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

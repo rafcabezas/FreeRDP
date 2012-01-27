@@ -22,7 +22,7 @@
 
 #include <freerdp/api.h>
 
-#include "config.h"
+#include "freerdp_config.h"
 
 #include <stdio.h>
 
