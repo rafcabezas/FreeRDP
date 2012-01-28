@@ -562,6 +562,10 @@ static void rdpsnd_process_terminate(rdpSvcPlugin* plugin)
 	xfree(plugin);
 }
 
-DEFINE_SVC_PLUGIN(rdpsnd, "rdpsnd",
+#ifdef STATIC_PLUGINS
+DEFINE_SVC_STATIC_PLUGIN(rdpsnd, RdpSnd, "rdpsnd",
 	CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP)
-
+#else
+DEFINE_SVC_PLUGIN(rdpsnd, "rdpsnd",
+                    CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP)
+#endif

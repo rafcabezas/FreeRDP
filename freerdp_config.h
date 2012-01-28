@@ -9,14 +9,22 @@
 
 /* Include files */
 #define HAVE_SYS_PARAM_H
+#ifndef HAVE_SYS_SOCKET_H
 #define HAVE_SYS_SOCKET_H
+#endif
 #define HAVE_NETDB_H
 #define HAVE_FCNTL_H
+#ifndef HAVE_UNISTD_H
 #define HAVE_UNISTD_H
+#endif
 #define HAVE_LIMITS_H
+#ifndef HAVE_STDINT_H
 #define HAVE_STDINT_H
+#endif
 #define HAVE_STDBOOL_H
+#ifndef HAVE_INTTYPES_H
 #define HAVE_INTTYPES_H
+#endif
 
 /* Endian */
 #undef BIG_ENDIAN
@@ -25,6 +33,10 @@
 #define PLUGIN_PATH ""
 #define EXT_PATH    ""
 #define KEYMAP_PATH ""
+#ifndef OBJC_INLINE
+#define OBJC_INLINE
+#endif
+#define STATIC_PLUGINS
 
 /* Options */
 /* #undef WITH_DEBUG_TRANSPORT */

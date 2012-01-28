@@ -20,6 +20,8 @@
 #ifndef __FREERDP_API_H
 #define __FREERDP_API_H
 
+#import "freerdp_config.h"
+
 #define FREERDP_INTERFACE_VERSION 4
 
 #if defined _WIN32 || defined __CYGWIN__
@@ -53,7 +55,11 @@
 #ifdef _WIN32
 #define INLINE	__inline
 #else
-#define INLINE	inline
+#ifdef OBJC_INLINE
+#define INLINE extern inline
+#else
+#define INLINE inline
+#endif
 #endif
 
 #define IFCALL(_cb, ...) do { if (_cb != NULL) { _cb( __VA_ARGS__ ); } } while (0)

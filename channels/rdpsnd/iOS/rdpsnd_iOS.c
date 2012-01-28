@@ -322,7 +322,7 @@ static void rdpsnd_ios_start(rdpsndDevicePlugin* device)
     }
 }
 
-int FreeRDPRdpsndDeviceEntry(PFREERDP_RDPSND_DEVICE_ENTRY_POINTS pEntryPoints)
+int FreeRDPRdpsndDeviceEntry_iOS(PFREERDP_RDPSND_DEVICE_ENTRY_POINTS pEntryPoints)
 {
     rdpsndiOSPlugin *ios;
     RDP_PLUGIN_DATA *data;

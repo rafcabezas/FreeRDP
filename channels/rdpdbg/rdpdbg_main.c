@@ -64,6 +64,12 @@ static void rdpdbg_process_terminate(rdpSvcPlugin* plugin)
 	xfree(plugin);
 }
 
-DEFINE_SVC_PLUGIN(rdpdbg, "rdpdbg",
+#ifdef STATIC_PLUGINS
+DEFINE_SVC_STATIC_PLUGIN(rdpdbg, DebugPlugin, "rdpdbg",
 	CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP |
 	CHANNEL_OPTION_COMPRESS_RDP | CHANNEL_OPTION_SHOW_PROTOCOL)
+#else
+DEFINE_SVC_PLUGIN(rdpdbg, "rdpdbg",
+                    CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP |
+                    CHANNEL_OPTION_COMPRESS_RDP | CHANNEL_OPTION_SHOW_PROTOCOL)
+#endif

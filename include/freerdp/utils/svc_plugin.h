@@ -81,4 +81,26 @@ int VirtualChannelEntry(PCHANNEL_ENTRY_POINTS pEntryPoints) \
 	return 1; \
 }
 
+#define DEFINE_SVC_STATIC_PLUGIN(_prefix, _suffix, _name, _options) \
+\
+int VirtualChannelEntry_##_suffix(PCHANNEL_ENTRY_POINTS pEntryPoints) \
+{ \
+_prefix##Plugin* _p; \
+\
+_p = xnew(_prefix##Plugin); \
+\
+_p->plugin.channel_def.options = _options; \
+strcpy(_p->plugin.channel_def.name, _name); \
+\
+_p->plugin.connect_callback = _prefix##_process_connect; \
+_p->plugin.receive_callback = _prefix##_process_receive; \
+_p->plugin.event_callback = _prefix##_process_event; \
+_p->plugin.terminate_callback = _prefix##_process_terminate; \
+\
+svc_plugin_init((rdpSvcPlugin*)_p, pEntryPoints); \
+\
+return 1; \
+}
+
+
 #endif /* __SVC_PLUGIN_UTILS_H */
