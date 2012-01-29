@@ -71,6 +71,9 @@ void freerdp_thread_stop(freerdp_thread* thread)
 {
 	int i = 0;
 
+    if (!thread)
+        return;
+    
 	wait_obj_set(thread->signals[0]);
 
 	while (thread->status > 0 && i < 1000)
@@ -83,6 +86,9 @@ void freerdp_thread_stop(freerdp_thread* thread)
 void freerdp_thread_free(freerdp_thread* thread)
 {
 	int i;
+
+    if (!thread)
+        return;
 
 	for (i = 0; i < thread->num_signals; i++)
 		wait_obj_free(thread->signals[i]);
