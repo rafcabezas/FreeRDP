@@ -168,7 +168,7 @@ static void rdpsnd_ios_set_format(rdpsndDevicePlugin* device, rdpsndFormat* form
     
     iOSSetFormat(iOS_data->context, &iOS_data->soundFormat);
     iOSSetBufferInSec(iOS_data->context, getAudioBufferInSec(iOS_data->cdvc));
-    iOSEnableDelay(iOS_data->context, 1);
+    iOSEnableDelay(iOS_data->context, 0);
 
     //rdpsnd_iOS_open(devplugin);
     LLOGLN(0, ("rdpsnd_iOS_set_format: (end)"));
@@ -312,6 +312,7 @@ rdpsnd_ios_free(rdpsndDevicePlugin * devplugin)
 
 static void rdpsnd_ios_start(rdpsndDevicePlugin* device)
 {
+    /*
 	rdpsndiOSPlugin* ios = (rdpsndiOSPlugin*)device;
     
     ios->context = iOSSoundAllocAndInit();
@@ -320,6 +321,7 @@ static void rdpsnd_ios_start(rdpsndDevicePlugin* device)
         LLOGLN(0, ("rdpsnd_iOS: iossound context alloc/init failed"));
         rdpsnd_ios_free(device);
     }
+     */
 }
 
 int FreeRDPRdpsndDeviceEntry_iOS(PFREERDP_RDPSND_DEVICE_ENTRY_POINTS pEntryPoints)
@@ -359,6 +361,14 @@ int FreeRDPRdpsndDeviceEntry_iOS(PFREERDP_RDPSND_DEVICE_ENTRY_POINTS pEntryPoint
     
     pEntryPoints->pRegisterRdpsndDevice(pEntryPoints->rdpsnd, (rdpsndDevicePlugin*)ios);
     ios->cdvc = ((RDP_PLUGIN_DATA *)pEntryPoints->plugin_data)[0].data[1];
+    
+    ios->context = iOSSoundAllocAndInit();
+    if (!ios->context)
+    {
+        LLOGLN(0, ("rdpsnd_iOS: iossound context alloc/init failed"));
+        rdpsnd_ios_free(&ios->device);
+    }
 
 	return 0;
 }
+
