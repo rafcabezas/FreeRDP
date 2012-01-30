@@ -55,6 +55,9 @@ LIST* list_new(void)
 
 void list_free(LIST* list)
 {
+    if (!list)
+        return;
+    
 	while (list->head)
 		list_dequeue(list);
 	xfree(list);
@@ -84,6 +87,9 @@ void* list_dequeue(LIST* list)
 	LIST_ITEM* item;
 	void* data = NULL;
 
+    if (!list)
+        return NULL;
+    
 	item = list->head;
 	if (item != NULL)
 	{
