@@ -37,6 +37,8 @@
 #define OBJC_INLINE
 #endif
 #define STATIC_PLUGINS
+//#define freerdp_log(instance,...) printf(__VA_ARGS__)
+void freerdp_log(void *inst, const char * text, ...);
 
 /* Options */
 /* #undef WITH_DEBUG_TRANSPORT */

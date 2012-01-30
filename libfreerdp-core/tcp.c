@@ -98,14 +98,14 @@ void tcp_get_mac_address(rdpTcp * tcp)
 
 	if (ioctl(tcp->sockfd, SIOCGIFHWADDR, &if_req) != 0)
 	{
-		printf("failed to obtain MAC address\n");
+		freerdp_log(tcp->instance, "failed to obtain MAC address\n");
 		return;
 	}
 
 	memmove((void*) mac, (void*) &if_req.ifr_ifru.ifru_hwaddr.sa_data[0], 6);
 #endif
 
-	/* printf("MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
+	/* freerdp_log(tcp->instance, "MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
 		mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]); */
 }
 
@@ -127,7 +127,7 @@ boolean tcp_connect(rdpTcp* tcp, const char* hostname, uint16 port)
 
 	if (status != 0)
 	{
-		printf("transport_connect: getaddrinfo (%s)\n", gai_strerror(status));
+		freerdp_log(tcp->instance, "transport_connect: getaddrinfo (%s)\n", gai_strerror(status));
 		return false;
 	}
 
@@ -141,7 +141,7 @@ boolean tcp_connect(rdpTcp* tcp, const char* hostname, uint16 port)
 
 		if (connect(tcp->sockfd, ai->ai_addr, ai->ai_addrlen) == 0)
 		{
-			printf("connected to %s:%s\n", hostname, servname);
+			freerdp_log(tcp->instance, "connected to %s:%s\n", hostname, servname);
 			break;
 		}
 
@@ -152,7 +152,7 @@ boolean tcp_connect(rdpTcp* tcp, const char* hostname, uint16 port)
 
 	if (tcp->sockfd == -1)
 	{
-		printf("unable to connect to %s:%s\n", hostname, servname);
+		freerdp_log(tcp->instance, "unable to connect to %s:%s\n", hostname, servname);
 		return false;
 	}
 
@@ -196,7 +196,7 @@ int tcp_read(rdpTcp* tcp, uint8* data, int length)
 
 		/* When peer disconnects we get status 0 with no error. */
 		if (status < 0)
-			printf("recv() error: %d\n", wsa_error);
+			freerdp_log(tcp->instance, "recv() error: %d\n", wsa_error);
 #else
 		/* No data available */
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -249,7 +249,7 @@ boolean tcp_set_blocking_mode(rdpTcp* tcp, boolean blocking)
 
 	if (flags == -1)
 	{
-		printf("tcp_set_blocking_mode: fcntl failed.\n");
+		freerdp_log(tcp->instance, "tcp_set_blocking_mode: fcntl failed.\n");
 		return false;
 	}
 
@@ -297,14 +297,16 @@ boolean tcp_set_keep_alive_mode(rdpTcp* tcp)
 	return true;
 }
 
-rdpTcp* tcp_new(rdpSettings* settings)
+rdpTcp* tcp_new(freerdp* instance)
 {
+    rdpSettings* settings = instance->settings;
 	rdpTcp* tcp;
 
 	tcp = (rdpTcp*) xzalloc(sizeof(rdpTcp));
 
 	if (tcp != NULL)
 	{
+        tcp->instance = instance;
 		tcp->sockfd = -1;
 		tcp->settings = settings;
 	}

@@ -30,6 +30,7 @@
 #include <freerdp/types.h>
 #include <freerdp/settings.h>
 #include <freerdp/utils/stream.h>
+#include "freerdp.h"
 
 #ifndef MSG_NOSIGNAL
 #define MSG_NOSIGNAL 0
@@ -43,6 +44,7 @@ struct rdp_tcp
 	char ip_address[32];
 	uint8 mac_address[6];
 	struct rdp_settings* settings;
+    freerdp* instance;
 #ifdef _WIN32
 	WSAEVENT wsa_event;
 #endif
@@ -55,7 +57,7 @@ int tcp_write(rdpTcp* tcp, uint8* data, int length);
 boolean tcp_set_blocking_mode(rdpTcp* tcp, boolean blocking);
 boolean tcp_set_keep_alive_mode(rdpTcp* tcp);
 
-rdpTcp* tcp_new(rdpSettings* settings);
+rdpTcp* tcp_new(freerdp* instance);
 void tcp_free(rdpTcp* tcp);
 
 #endif /* __TCP_H */
