@@ -145,6 +145,14 @@ boolean tcp_connect(rdpTcp* tcp, const char* hostname, uint16 port)
 			break;
 		}
 
+        if (errno == ETIMEDOUT)
+            freerdp_log(tcp->instance, "Error connecting to %s:%s\n. Connection Timeout", hostname, servname);
+        else if (errno == ECONNREFUSED)
+            freerdp_log(tcp->instance, "Error connecting to %s:%s\n. Connection Refused", hostname, servname);
+        else {
+            freerdp_log(tcp->instance, "Error connecting to %s:%s\n. %s", hostname, servname, strerror(errno));            
+        }
+        
 		close(tcp->sockfd);
 		tcp->sockfd = -1;
 	}
@@ -204,7 +212,7 @@ int tcp_read(rdpTcp* tcp, uint8* data, int length)
 
 		/* When peer disconnects we get status 0 with no error. */
 		if (status < 0)
-			perror("recv");
+			freerdp_log(tcp->instance, "tcp_read: Connection Closed");
 #endif
 		return -1;
 	}
