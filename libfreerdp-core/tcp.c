@@ -146,11 +146,11 @@ boolean tcp_connect(rdpTcp* tcp, const char* hostname, uint16 port)
 		}
 
         if (errno == ETIMEDOUT)
-            freerdp_log(tcp->instance, "Error connecting to %s:%s\n. Connection Timeout", hostname, servname);
+            freerdp_log(tcp->instance, "Error connecting to %s:%s. Connection Timeout", hostname, servname);
         else if (errno == ECONNREFUSED)
-            freerdp_log(tcp->instance, "Error connecting to %s:%s\n. Connection Refused", hostname, servname);
+            freerdp_log(tcp->instance, "Error connecting to %s:%s. Connection Refused", hostname, servname);
         else {
-            freerdp_log(tcp->instance, "Error connecting to %s:%s\n. %s", hostname, servname, strerror(errno));            
+            freerdp_log(tcp->instance, "Error connecting to %s:%s. %s", hostname, servname, strerror(errno));            
         }
         
 		close(tcp->sockfd);
