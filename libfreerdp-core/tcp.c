@@ -193,7 +193,13 @@ int tcp_read(rdpTcp* tcp, uint8* data, int length)
 
 	status = recv(tcp->sockfd, data, length, 0);
 
-	if (status <= 0)
+	if (status == 0)
+	{
+		/* Peer disconnected. */
+        freerdp_log(tcp->instance, "tcp_read: Connection Closed");
+		return -1;
+	}
+	else if (status < 0)
 	{
 #ifdef _WIN32
 		int wsa_error = WSAGetLastError();
@@ -202,17 +208,13 @@ int tcp_read(rdpTcp* tcp, uint8* data, int length)
 		if (wsa_error == WSAEWOULDBLOCK)
 			return 0;
 
-		/* When peer disconnects we get status 0 with no error. */
-		if (status < 0)
-			freerdp_log(tcp->instance, "recv() error: %d\n", wsa_error);
+        freerdp_log(tcp->instance, "recv() error: %d\n", wsa_error);
 #else
 		/* No data available */
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return 0;
 
-		/* When peer disconnects we get status 0 with no error. */
-		if (status < 0)
-			freerdp_log(tcp->instance, "tcp_read: Connection Closed");
+        freerdp_log(tcp->instance, "tcp_read: Connection Closed");
 #endif
 		return -1;
 	}
@@ -228,10 +230,20 @@ int tcp_write(rdpTcp* tcp, uint8* data, int length)
 
 	if (status < 0)
 	{
+#ifdef _WIN32
+		int wsa_error = WSAGetLastError();
+
+		/* No data available */
+		if (wsa_error == WSAEWOULDBLOCK)
+			status = 0;
+                else 
+                        perror("send");
+#else
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			status = 0;
 		else
 			perror("send");
+#endif
 	}
 
 	return status;

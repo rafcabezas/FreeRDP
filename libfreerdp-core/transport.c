@@ -85,7 +85,7 @@ boolean transport_connect_rdp(rdpTransport* transport)
 boolean transport_connect_tls(rdpTransport* transport)
 {
 	if (transport->tls == NULL)
-		transport->tls = tls_new();
+		transport->tls = tls_new(transport->settings);
 
 	transport->layer = TRANSPORT_LAYER_TLS;
 	transport->tls->sockfd = transport->tcp->sockfd;
@@ -99,7 +99,7 @@ boolean transport_connect_tls(rdpTransport* transport)
 boolean transport_connect_nla(rdpTransport* transport)
 {
 	if (transport->tls == NULL)
-		transport->tls = tls_new();
+		transport->tls = tls_new(transport->settings);
 
 	transport->layer = TRANSPORT_LAYER_TLS;
 	transport->tls->sockfd = transport->tcp->sockfd;
@@ -139,7 +139,7 @@ boolean transport_accept_rdp(rdpTransport* transport)
 boolean transport_accept_tls(rdpTransport* transport)
 {
 	if (transport->tls == NULL)
-		transport->tls = tls_new();
+		transport->tls = tls_new(transport->settings);
 
 	transport->layer = TRANSPORT_LAYER_TLS;
 	transport->tls->sockfd = transport->tcp->sockfd;
@@ -153,7 +153,7 @@ boolean transport_accept_tls(rdpTransport* transport)
 boolean transport_accept_nla(rdpTransport* transport)
 {
 	if (transport->tls == NULL)
-		transport->tls = tls_new();
+		transport->tls = tls_new(transport->settings);
 
 	transport->layer = TRANSPORT_LAYER_TLS;
 	transport->tls->sockfd = transport->tcp->sockfd;
@@ -308,6 +308,13 @@ int transport_check_fds(rdpTransport* transport)
 		{
 			/* Ensure the Fast Path header is available. */
 			if (pos <= 2)
+			{
+				stream_set_pos(transport->recv_buffer, pos);
+				return 0;
+			}
+			/* Fastpath header can be two or three bytes long. */
+			length = fastpath_header_length(transport->recv_buffer);
+			if (pos < length)
 			{
 				stream_set_pos(transport->recv_buffer, pos);
 				return 0;

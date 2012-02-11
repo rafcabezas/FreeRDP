@@ -162,6 +162,9 @@ void rdp_write_general_capability_set(STREAM* s, rdpSettings* settings)
 	if (settings->fastpath_output)
 		extraFlags |= FASTPATH_OUTPUT_SUPPORTED;
 
+	if (settings->salted_checksum)
+		extraFlags |= ENC_SALTED_CHECKSUM;
+
 	if (settings->server_mode)
 	{
 		/* not yet supported server-side */
@@ -1797,6 +1800,9 @@ boolean rdp_recv_demand_active(rdpRdp* rdp, STREAM* s)
 
 	if (!rdp_read_header(rdp, s, &length, &channelId))
 		return false;
+
+	if (rdp->disconnect)
+		return true;
 
 	if (rdp->settings->encryption)
 	{

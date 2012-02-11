@@ -101,7 +101,7 @@ int freerdp_parse_args(rdpSettings* settings, int argc, char** argv,
 				"  --ntlm: force NTLM authentication protocol version (1 or 2)\n"
 				"  --ignore-certificate: ignore verification of logon certificate\n"
 				"  --sec: force protocol security (rdp, tls or nla)\n"
-				"  --secure-checksum: use salted checksums with Standard RDP encryption\n"
+				"  --salted-checksum: use salted checksums with Standard RDP encryption\n"
 				"  --version: print version information\n"
 				"\n", argv[0]);
 			return FREERDP_ARGS_PARSE_HELP; //TODO: What is the correct return
@@ -305,6 +305,17 @@ int freerdp_parse_args(rdpSettings* settings, int argc, char** argv,
 		else if (strcmp("--ignore-certificate", argv[index]) == 0)
 		{
 			settings->ignore_certificate = true;
+		}
+		else if (strcmp("--certificate-name", argv[index]) == 0)
+		{
+			index++;
+			if (index == argc)
+			{
+				printf("missing certificate name\n");
+				return FREERDP_ARGS_PARSE_FAILURE;
+			}
+
+			settings->certificate_name = xstrdup(argv[index]);
 		}
 		else if (strcmp("--no-fastpath", argv[index]) == 0)
 		{
@@ -537,13 +548,18 @@ int freerdp_parse_args(rdpSettings* settings, int argc, char** argv,
 				i = 0;
 				while (index < argc && strcmp("--", argv[index]) != 0)
 				{
-					plugin_data = (RDP_PLUGIN_DATA*)xrealloc(plugin_data, sizeof(RDP_PLUGIN_DATA) * (i + 2));
+					if (plugin_data == NULL)
+						plugin_data = (RDP_PLUGIN_DATA*) xmalloc(sizeof(RDP_PLUGIN_DATA) * (i + 2));
+					else
+						plugin_data = (RDP_PLUGIN_DATA*) xrealloc(plugin_data, sizeof(RDP_PLUGIN_DATA) * (i + 2));
+
 					plugin_data[i].size = sizeof(RDP_PLUGIN_DATA);
 					plugin_data[i].data[0] = NULL;
 					plugin_data[i].data[1] = NULL;
 					plugin_data[i].data[2] = NULL;
 					plugin_data[i].data[3] = NULL;
 					plugin_data[i + 1].size = 0;
+
 					for (j = 0, p = argv[index]; j < 4 && p != NULL; j++)
 					{
 						if (*p == '\'')
@@ -601,9 +617,9 @@ int freerdp_parse_args(rdpSettings* settings, int argc, char** argv,
 			}
 			num_extensions++;
 		}
-		else if (strcmp("--secure-checksum", argv[index]) == 0)
+		else if (strcmp("--salted-checksum", argv[index]) == 0)
 		{
-			settings->secure_checksum = true;
+			settings->salted_checksum = true;
 		}
 		else if (strcmp("--version", argv[index]) == 0)
 		{

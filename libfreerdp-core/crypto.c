@@ -100,12 +100,15 @@ void crypto_des3_decrypt(CryptoDes3 des3, uint32 length, const uint8* in_data, u
 {
 	int len;
 	EVP_DecryptUpdate(&des3->des3_ctx, out_data, &len, in_data, length);
+
 	if (length != len)
-		abort();	// TODO
+		abort(); /* TODO */
 }
 
 void crypto_des3_free(CryptoDes3 des3)
 {
+	if (des3 == NULL)
+		return;
 	EVP_CIPHER_CTX_cleanup(&des3->des3_ctx);
 	xfree(des3);
 }
@@ -134,6 +137,8 @@ void crypto_hmac_final(CryptoHmac hmac, uint8* out_data, uint32 length)
 
 void crypto_hmac_free(CryptoHmac hmac)
 {
+	if (hmac == NULL)
+		return;
 	HMAC_CTX_cleanup(&hmac->hmac_ctx);
 	xfree(hmac);
 }
@@ -148,6 +153,8 @@ CryptoCert crypto_cert_read(uint8* data, uint32 length)
 
 void crypto_cert_free(CryptoCert cert)
 {
+	if (cert == NULL)
+		return;
 	X509_free(cert->px509);
 	xfree(cert);
 }
@@ -190,9 +197,11 @@ exit:
 
 /*
  * Terminal Services Signing Keys.
- * Yes, Terminal Services Private Key is publically available.
+ * Yes, Terminal Services Private Key is publicly available.
  */
-const uint8 tssk_modulus[] = {
+
+const uint8 tssk_modulus[] =
+{
 	0x3d, 0x3a, 0x5e, 0xbd, 0x72, 0x43, 0x3e, 0xc9,
 	0x4d, 0xbb, 0xc1, 0x1e, 0x4a, 0xba, 0x5f, 0xcb,
 	0x3e, 0x88, 0x20, 0x87, 0xef, 0xf5, 0xc1, 0xe2,
@@ -202,7 +211,9 @@ const uint8 tssk_modulus[] = {
 	0x6c, 0x5e, 0x06, 0x09, 0x1a, 0xf5, 0x61, 0xbb,
 	0x20, 0x93, 0x09, 0x5f, 0x05, 0x6d, 0xea, 0x87
 };
-const uint8 tssk_privateExponent[] = {
+
+const uint8 tssk_privateExponent[] =
+{
 	0x87, 0xa7, 0x19, 0x32, 0xda, 0x11, 0x87, 0x55,
 	0x58, 0x00, 0x16, 0x16, 0x25, 0x65, 0x68, 0xf8,
 	0x24, 0x3e, 0xe6, 0xfa, 0xe9, 0x67, 0x49, 0x94,
@@ -212,7 +223,9 @@ const uint8 tssk_privateExponent[] = {
 	0x35, 0x07, 0x79, 0x17, 0x0b, 0x51, 0x9b, 0xb3,
 	0xc7, 0x10, 0x01, 0x13, 0xe7, 0x3f, 0xf3, 0x5f
 };
-const uint8 tssk_exponent[] = {
+
+const uint8 tssk_exponent[] =
+{
 	0x5b, 0x7b, 0x88, 0xc0
 };
 
@@ -263,7 +276,6 @@ static void crypto_rsa_common(const uint8* input, int length, uint32 key_length,
 
 static void crypto_rsa_public(const uint8* input, int length, uint32 key_length, const uint8* modulus, const uint8* exponent, uint8* output)
 {
-
 	crypto_rsa_common(input, length, key_length, modulus, exponent, EXPONENT_MAX_SIZE, output);
 }
 
@@ -349,7 +361,7 @@ char* crypto_print_name(X509_NAME* name)
 	char* buffer = NULL;
 	BIO* outBIO = BIO_new(BIO_s_mem());
 	
-	if(X509_NAME_print_ex(outBIO, name, 0, XN_FLAG_ONELINE) > 0) 
+	if (X509_NAME_print_ex(outBIO, name, 0, XN_FLAG_ONELINE) > 0)
 	{
 		unsigned long size = BIO_number_written(outBIO);
 		buffer = xzalloc(size + 1);
@@ -367,14 +379,88 @@ char* crypto_cert_subject(X509* xcert)
 	return crypto_print_name(X509_get_subject_name(xcert));
 }
 
+char* crypto_cert_subject_common_name(X509* xcert, int* length)
+{
+	int index;
+	uint8* common_name;
+	X509_NAME* subject_name;
+	X509_NAME_ENTRY* entry;
+	ASN1_STRING* entry_data;
+
+	subject_name = X509_get_subject_name(xcert);
+
+	if (subject_name == NULL)
+		return NULL;
+
+	index = X509_NAME_get_index_by_NID(subject_name, NID_commonName, -1);
+
+	if (index < 0)
+		return NULL;
+
+	entry = X509_NAME_get_entry(subject_name, index);
+
+	if (entry == NULL)
+		return NULL;
+
+	entry_data = X509_NAME_ENTRY_get_data(entry);
+
+	if (entry_data == NULL)
+		return NULL;
+
+	*length = ASN1_STRING_to_UTF8(&common_name, entry_data);
+
+	if (*length < 0)
+		return NULL;
+
+	return (char*) common_name;
+}
+
+char** crypto_cert_subject_alt_name(X509* xcert, int* count, int** lengths)
+{
+	int index;
+	int length;
+	char** strings;
+	uint8* string;
+	int num_subject_alt_names;
+	GENERAL_NAMES* subject_alt_names;
+	GENERAL_NAME* subject_alt_name;
+
+	*count = 0;
+	subject_alt_names = X509_get_ext_d2i(xcert, NID_subject_alt_name, 0, 0);
+
+	if (!subject_alt_names)
+		return NULL;
+
+	num_subject_alt_names = sk_GENERAL_NAME_num(subject_alt_names);
+	strings = (char**) malloc(sizeof(char*) * num_subject_alt_names);
+	*lengths = (int*) malloc(sizeof(int*) * num_subject_alt_names);
+
+	for (index = 0; index < num_subject_alt_names; ++index)
+	{
+		subject_alt_name = sk_GENERAL_NAME_value(subject_alt_names, index);
+
+		if (subject_alt_name->type == GEN_DNS)
+		{
+			length = ASN1_STRING_to_UTF8(&string, subject_alt_name->d.dNSName);
+			strings[*count] = (char*) string;
+			*lengths[*count] = length;
+			(*count)++;
+		}
+	}
+
+	if (*count < 1)
+		return NULL;
+
+	return strings;
+}
+
 char* crypto_cert_issuer(X509* xcert)
 {
 	return crypto_print_name(X509_get_issuer_name(xcert));
 }
 
-boolean x509_verify_cert(CryptoCert cert, rdpSettings* settings)
+boolean x509_verify_certificate(CryptoCert cert, char* certificate_store_path)
 {
-	char* cert_loc;
 	X509_STORE_CTX* csc;
 	boolean status = false;
 	X509_STORE* cert_ctx = NULL;
@@ -398,12 +484,10 @@ boolean x509_verify_cert(CryptoCert cert, rdpSettings* settings)
 		goto end;
 
 	X509_LOOKUP_add_dir(lookup, NULL, X509_FILETYPE_DEFAULT);
-	cert_loc = get_local_certloc(settings->home_path);
 
-	if(cert_loc != NULL)
+	if (certificate_store_path != NULL)
 	{
-		X509_LOOKUP_add_dir(lookup, cert_loc, X509_FILETYPE_ASN1);
-		xfree(cert_loc);
+		X509_LOOKUP_add_dir(lookup, certificate_store_path, X509_FILETYPE_ASN1);
 	}
 
 	csc = X509_STORE_CTX_new();
@@ -413,7 +497,7 @@ boolean x509_verify_cert(CryptoCert cert, rdpSettings* settings)
 
 	X509_STORE_set_flags(cert_ctx, 0);
 
-	if(!X509_STORE_CTX_init(csc, cert_ctx, xcert, 0))
+	if (!X509_STORE_CTX_init(csc, cert_ctx, xcert, 0))
 		goto end;
 
 	if (X509_verify_cert(csc) == 1)
@@ -426,13 +510,13 @@ end:
 	return status;
 }
 
-rdpCertData* crypto_get_cert_data(X509* xcert, char* hostname)
+rdpCertificateData* crypto_get_certificate_data(X509* xcert, char* hostname)
 {
 	char* fp;
-	rdpCertData* certdata;
+	rdpCertificateData* certdata;
 
 	fp = crypto_cert_fingerprint(xcert);
-	certdata = certdata_new(hostname, fp);
+	certdata = certificate_data_new(hostname, fp);
 	xfree(fp);
 
 	return certdata;

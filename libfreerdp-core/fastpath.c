@@ -42,18 +42,32 @@
 
 #define FASTPATH_MAX_PACKET_SIZE 0x3FFF
 
+/*
+ * The fastpath header may be two or three bytes long.
+ * This function assumes that at least two bytes are available in the stream
+ * and doesn't touch third byte.
+ */
+uint16 fastpath_header_length(STREAM* s)
+{
+	uint8 length1;
+
+	stream_seek_uint8(s);
+	stream_read_uint8(s, length1);
+	stream_rewind(s, 2);
+
+	return ((length1 & 0x80) != 0 ? 3 : 2);
+}
+
 /**
  * Read a Fast-Path packet header.\n
  * @param s stream
  * @param encryptionFlags
  * @return length
  */
-
 uint16 fastpath_read_header(rdpFastPath* fastpath, STREAM* s)
 {
 	uint8 header;
 	uint16 length;
-	uint8 t;
 
 	stream_read_uint8(s, header);
 
@@ -63,15 +77,7 @@ uint16 fastpath_read_header(rdpFastPath* fastpath, STREAM* s)
 		fastpath->numberEvents = (header & 0x3C) >> 2;
 	}
 
-	stream_read_uint8(s, length); /* length1 */
-	/* If most significant bit is not set, length2 is not presented. */
-	if ((length & 0x80))
-	{
-		length &= 0x7F;
-		length <<= 8;
-		stream_read_uint8(s, t);
-		length += t;
-	}
+	per_read_length(s, &length);
 
 	return length;
 }
@@ -394,13 +400,20 @@ static boolean fastpath_recv_input_event_sync(rdpFastPath* fastpath, STREAM* s, 
 static boolean fastpath_recv_input_event_unicode(rdpFastPath* fastpath, STREAM* s, uint8 eventFlags)
 {
 	uint16 unicodeCode;
+	uint16 flags;
 
 	if (stream_get_left(s) < 2)
 		return false;
 
 	stream_read_uint16(s, unicodeCode); /* unicodeCode (2 bytes) */
 
-	IFCALL(fastpath->rdp->input->UnicodeKeyboardEvent, fastpath->rdp->input, unicodeCode);
+	flags = 0;
+	if ((eventFlags & FASTPATH_INPUT_KBDFLAGS_RELEASE))
+		flags |= KBD_FLAGS_RELEASE;
+	else
+		flags |= KBD_FLAGS_DOWN;
+
+	IFCALL(fastpath->rdp->input->UnicodeKeyboardEvent, fastpath->rdp->input, flags, unicodeCode);
 
 	return true;
 }

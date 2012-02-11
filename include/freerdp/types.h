@@ -24,7 +24,7 @@
 #include "freerdp_config.h"
 
 #ifdef _WIN32
-#include <WinDef.h>
+#include <windef.h>
 #endif
 
 /* Base Types */
@@ -70,6 +70,7 @@ typedef signed long long sint64;
 #ifdef HAVE_STDBOOL_H
 
 #include <stdbool.h>
+
 typedef int boolean;
 
 #else

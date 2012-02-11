@@ -29,6 +29,7 @@
 #include <sys/select.h>
 #include <freerdp/kbd/kbd.h>
 #include <freerdp/codec/color.h>
+#include <freerdp/utils/file.h>
 #include <freerdp/utils/sleep.h>
 #include <freerdp/utils/memory.h>
 #include <freerdp/utils/thread.h>
@@ -36,6 +37,8 @@
 extern char* xf_pcap_file;
 extern boolean xf_pcap_dump_realtime;
 
+#include "xf_event.h"
+#include "xf_input.h"
 #include "xf_encode.h"
 
 #include "xf_peer.h"
@@ -108,13 +111,13 @@ void xf_xdamage_init(xfInfo* xfi)
 
 	values.subwindow_mode = IncludeInferiors;
 	xfi->xdamage_gc = XCreateGC(xfi->display, xfi->root_window, GCSubwindowMode, &values);
+	XSetFunction(xfi->display, xfi->xdamage_gc, GXcopy);
 }
 
 #endif
 
 void xf_xshm_init(xfInfo* xfi)
 {
-	xfi->use_xshm = false;
 	xfi->fb_shm_info.shmid = -1;
 	xfi->fb_shm_info.shmaddr = (char*) -1;
 
@@ -154,8 +157,6 @@ void xf_xshm_init(xfInfo* xfi)
 	xfi->fb_pixmap = XShmCreatePixmap(xfi->display,
 			xfi->root_window, xfi->fb_image->data, &(xfi->fb_shm_info),
 			xfi->fb_image->width, xfi->fb_image->height, xfi->fb_image->depth);
-
-	//xfi->use_xshm = true;
 }
 
 xfInfo* xf_info_init()
@@ -172,6 +173,7 @@ xfInfo* xf_info_init()
 
 	xfi = xnew(xfInfo);
 
+	//xfi->use_xshm = true;
 	xfi->display = XOpenDisplay(NULL);
 
 	XInitThreads();
@@ -182,6 +184,7 @@ xfInfo* xf_info_init()
 		exit(1);
 	}
 
+	xfi->xfds = ConnectionNumber(xfi->display);
 	xfi->number = DefaultScreen(xfi->display);
 	xfi->screen = ScreenOfDisplay(xfi->display, xfi->number);
 	xfi->depth = DefaultDepthOfScreen(xfi->screen);
@@ -234,9 +237,7 @@ xfInfo* xf_info_init()
 	}
 	XFree(vis);
 
-	xfi->clrconv = (HCLRCONV) xnew(HCLRCONV);
-	xfi->clrconv->invert = 1;
-	xfi->clrconv->alpha = 1;
+	xfi->clrconv = freerdp_clrconv_new(CLRCONV_ALPHA | CLRCONV_INVERT);
 
 	XSelectInput(xfi->display, xfi->root_window, SubstructureNotifyMask);
 
@@ -246,7 +247,7 @@ xfInfo* xf_info_init()
 
 	xf_xshm_init(xfi);
 
-	xfi->bytesPerPixel = (xfi->use_xshm) ? 4 : 3;
+	xfi->bytesPerPixel = 4;
 
 	freerdp_kbd_init(xfi->display, 0);
 
@@ -261,10 +262,7 @@ void xf_peer_context_new(freerdp_peer* client, xfPeerContext* context)
 	context->rfx_context->width = context->info->width;
 	context->rfx_context->height = context->info->height;
 
-	if (context->info->use_xshm)
-		rfx_context_set_pixel_format(context->rfx_context, RFX_PIXEL_FORMAT_BGRA);
-	else
-		rfx_context_set_pixel_format(context->rfx_context, RFX_PIXEL_FORMAT_RGB);
+	rfx_context_set_pixel_format(context->rfx_context, RFX_PIXEL_FORMAT_BGRA);
 
 	context->s = stream_new(65536);
 }
@@ -281,6 +279,7 @@ void xf_peer_context_free(freerdp_peer* client, xfPeerContext* context)
 
 void xf_peer_init(freerdp_peer* client)
 {
+	xfInfo* xfi;
 	xfPeerContext* xfp;
 
 	client->context_size = sizeof(xfPeerContext);
@@ -290,26 +289,13 @@ void xf_peer_init(freerdp_peer* client)
 
 	xfp = (xfPeerContext*) client->context;
 
-	xfp->pipe_fd[0] = -1;
-	xfp->pipe_fd[1] = -1;
-
-	if (pipe(xfp->pipe_fd) < 0)
-		printf("xf_peer_init: pipe failed\n");
-
+	xfp->fps = 24;
 	xfp->thread = 0;
 	xfp->activations = 0;
+	xfp->event_queue = xf_event_queue_new();
 
-	xfp->stopwatch = stopwatch_create();
-
-	xfp->hdc = gdi_GetDC();
-
-	xfp->hdc->hwnd = (HGDI_WND) malloc(sizeof(GDI_WND));
-	xfp->hdc->hwnd->invalid = gdi_CreateRectRgn(0, 0, 0, 0);
-	xfp->hdc->hwnd->invalid->null = 1;
-
-	xfp->hdc->hwnd->count = 32;
-	xfp->hdc->hwnd->cinvalid = (HGDI_RGN) malloc(sizeof(GDI_RGN) * xfp->hdc->hwnd->count);
-	xfp->hdc->hwnd->ninvalid = 0;
+	xfi = xfp->info;
+	xfp->hdc = gdi_CreateDC(xfi->clrconv, xfi->bpp);
 
 	pthread_mutex_init(&(xfp->mutex), NULL);
 }
@@ -321,134 +307,12 @@ STREAM* xf_peer_stream_init(xfPeerContext* context)
 	return context->s;
 }
 
-int xf_is_event_set(xfPeerContext* xfp)
-{
-	fd_set rfds;
-	int num_set;
-	struct timeval time;
-
-	FD_ZERO(&rfds);
-	FD_SET(xfp->pipe_fd[0], &rfds);
-	memset(&time, 0, sizeof(time));
-	num_set = select(xfp->pipe_fd[0] + 1, &rfds, 0, 0, &time);
-
-	return (num_set == 1);
-}
-
-void xf_signal_event(xfPeerContext* xfp)
-{
-	int length;
-
-	length = write(xfp->pipe_fd[1], "sig", 4);
-
-	if (length != 4)
-		printf("xf_signal_event: error\n");
-}
-
-void xf_clear_event(xfPeerContext* xfp)
-{
-	int length;
-
-	while (xf_is_event_set(xfp))
-	{
-		length = read(xfp->pipe_fd[0], &length, 4);
-
-		if (length != 4)
-			printf("xf_clear_event: error\n");
-	}
-}
-
-void* xf_monitor_graphics(void* param)
-{
-	xfInfo* xfi;
-	XEvent xevent;
-	uint32 sec, usec;
-	XRectangle region;
-	xfPeerContext* xfp;
-	freerdp_peer* client;
-	int x, y, width, height;
-	XDamageNotifyEvent* notify;
-
-	client = (freerdp_peer*) param;
-	xfp = (xfPeerContext*) client->context;
-	xfi = xfp->info;
-
-	xfp->capture_buffer = (uint8*) xmalloc(xfi->width * xfi->height * xfi->bytesPerPixel);
-
-	pthread_detach(pthread_self());
-
-	stopwatch_start(xfp->stopwatch);
-
-	while (1)
-	{
-		pthread_mutex_lock(&(xfp->mutex));
-
-		while (XPending(xfi->display))
-		{
-			memset(&xevent, 0, sizeof(xevent));
-			XNextEvent(xfi->display, &xevent);
-
-			if (xevent.type == xfi->xdamage_notify_event)
-			{
-				notify = (XDamageNotifyEvent*) &xevent;
-
-				x = notify->area.x;
-				y = notify->area.y;
-				width = notify->area.width;
-				height = notify->area.height;
-
-				region.x = x;
-				region.y = y;
-				region.width = width;
-				region.height = height;
-
-#ifdef WITH_XFIXES
-				XFixesSetRegion(xfi->display, xfi->xdamage_region, &region, 1);
-				XDamageSubtract(xfi->display, xfi->xdamage, xfi->xdamage_region, None);
-#endif
-
-				gdi_InvalidateRegion(xfp->hdc, x, y, width, height);
-
-				stopwatch_stop(xfp->stopwatch);
-				stopwatch_get_elapsed_time_in_useconds(xfp->stopwatch, &sec, &usec);
-
-				if ((sec > 0) || (usec > 30))
-					break;
-			}
-		}
-
-		stopwatch_stop(xfp->stopwatch);
-		stopwatch_get_elapsed_time_in_useconds(xfp->stopwatch, &sec, &usec);
-
-		if ((sec > 0) || (usec > 30))
-		{
-			HGDI_RGN region;
-
-			stopwatch_reset(xfp->stopwatch);
-			stopwatch_start(xfp->stopwatch);
-
-			region = xfp->hdc->hwnd->invalid;
-			pthread_mutex_unlock(&(xfp->mutex));
-
-			xf_signal_event(xfp);
-		}
-		else
-		{
-			pthread_mutex_unlock(&(xfp->mutex));
-		}
-
-		freerdp_usleep(30);
-	}
-
-	return NULL;
-}
-
 void xf_peer_live_rfx(freerdp_peer* client)
 {
 	xfPeerContext* xfp = (xfPeerContext*) client->context;
 
 	if (xfp->activations == 1)
-		pthread_create(&(xfp->thread), 0, xf_monitor_graphics, (void*) client);
+		pthread_create(&(xfp->thread), 0, xf_monitor_updates, (void*) client);
 }
 
 static boolean xf_peer_sleep_tsdiff(uint32 *old_sec, uint32 *old_usec, uint32 new_sec, uint32 new_usec)
@@ -529,6 +393,7 @@ void xf_peer_dump_rfx(freerdp_peer* client)
 void xf_peer_rfx_update(freerdp_peer* client, int x, int y, int width, int height)
 {
 	STREAM* s;
+	uint8* data;
 	xfInfo* xfi;
 	RFX_RECT rect;
 	XImage* image;
@@ -546,17 +411,25 @@ void xf_peer_rfx_update(freerdp_peer* client, int x, int y, int width, int heigh
 
 	s = xf_peer_stream_init(xfp);
 
-	image = xf_snapshot(xfp, x, y, width, height);
-
 	if (xfi->use_xshm)
 	{
-		rect.x = 0;
-		rect.y = 0;
+		width = x + width;
+		height = y + height;
+		x = 0;
+		y = 0;
+
+		rect.x = x;
+		rect.y = y;
 		rect.width = width;
 		rect.height = height;
 
-		rfx_compose_message(xfp->rfx_context, s, &rect, 1,
-				(uint8*) image->data, width, height, image->bytes_per_line);
+		image = xf_snapshot(xfp, x, y, width, height);
+
+		data = (uint8*) image->data;
+		data = &data[(y * image->bytes_per_line) + (x * image->bits_per_pixel)];
+
+		rfx_compose_message(xfp->rfx_context, s, &rect, 1, data,
+				width, height, image->bytes_per_line);
 
 		cmd->destLeft = x;
 		cmd->destTop = y;
@@ -570,16 +443,17 @@ void xf_peer_rfx_update(freerdp_peer* client, int x, int y, int width, int heigh
 		rect.width = width;
 		rect.height = height;
 
-		freerdp_image_convert((uint8*) image->data, xfp->capture_buffer,
-				width, height, 32, 24, xfi->clrconv);
+		image = xf_snapshot(xfp, x, y, width, height);
 
 		rfx_compose_message(xfp->rfx_context, s, &rect, 1,
-				xfp->capture_buffer, width, height, width * xfi->bytesPerPixel);
+				(uint8*) image->data, width, height, width * xfi->bytesPerPixel);
 
 		cmd->destLeft = x;
 		cmd->destTop = y;
 		cmd->destRight = x + width;
 		cmd->destBottom = y + height;
+
+		XDestroyImage(image);
 	}
 
 	cmd->bpp = 32;
@@ -596,10 +470,10 @@ boolean xf_peer_get_fds(freerdp_peer* client, void** rfds, int* rcount)
 {
 	xfPeerContext* xfp = (xfPeerContext*) client->context;
 
-	if (xfp->pipe_fd[0] == -1)
+	if (xfp->event_queue->pipe_fd[0] == -1)
 		return true;
 
-	rfds[*rcount] = (void *)(long) xfp->pipe_fd[0];
+	rfds[*rcount] = (void *)(long) xfp->event_queue->pipe_fd[0];
 	(*rcount)++;
 
 	return true;
@@ -608,30 +482,42 @@ boolean xf_peer_get_fds(freerdp_peer* client, void** rfds, int* rcount)
 boolean xf_peer_check_fds(freerdp_peer* client)
 {
 	xfInfo* xfi;
+	xfEvent* event;
 	xfPeerContext* xfp;
+	HGDI_RGN invalid_region;
 
 	xfp = (xfPeerContext*) client->context;
 	xfi = xfp->info;
 
-	if (xfp->pipe_fd[0] == -1)
-		return true;
-
 	if (xfp->activated == false)
 		return true;
 
-	if (xf_is_event_set(xfp))
+	event = xf_event_peek(xfp->event_queue);
+
+	if (event != NULL)
 	{
-		HGDI_RGN region;
+		if (event->type == XF_EVENT_TYPE_REGION)
+		{
+			xfEventRegion* region = (xfEventRegion*) xf_event_pop(xfp->event_queue);
+			gdi_InvalidateRegion(xfp->hdc, region->x, region->y, region->width, region->height);
+			xf_event_region_free(region);
+		}
+		else if (event->type == XF_EVENT_TYPE_FRAME_TICK)
+		{
+			event = xf_event_pop(xfp->event_queue);
+			invalid_region = xfp->hdc->hwnd->invalid;
 
-		xf_clear_event(xfp);
+			if (invalid_region->null == false)
+			{
+				xf_peer_rfx_update(client, invalid_region->x, invalid_region->y,
+					invalid_region->w, invalid_region->h);
+			}
 
-		region = xfp->hdc->hwnd->invalid;
+			invalid_region->null = 1;
+			xfp->hdc->hwnd->ninvalid = 0;
 
-		if (region->null)
-			return true;
-
-		xf_peer_rfx_update(client, region->x, region->y, region->w, region->h);
-		region->null = true;
+			xf_event_free(event);
+		}
 	}
 
 	return true;
@@ -703,99 +589,6 @@ boolean xf_peer_activate(freerdp_peer* client)
 	return true;
 }
 
-void xf_peer_synchronize_event(rdpInput* input, uint32 flags)
-{
-	printf("Client sent a synchronize event (flags:0x%X)\n", flags);
-}
-
-void xf_peer_keyboard_event(rdpInput* input, uint16 flags, uint16 code)
-{
-	unsigned int keycode;
-	boolean extended = false;
-	xfPeerContext* xfp = (xfPeerContext*) input->context;
-	xfInfo* xfi = xfp->info;
-
-	if (flags & KBD_FLAGS_EXTENDED)
-		extended = true;
-
-	keycode = freerdp_kbd_get_keycode_by_scancode(code, extended);
-
-	if (keycode != 0)
-	{
-#ifdef WITH_XTEST
-		pthread_mutex_lock(&(xfp->mutex));
-
-		if (flags & KBD_FLAGS_DOWN)
-			XTestFakeKeyEvent(xfi->display, keycode, True, 0);
-		else if (flags & KBD_FLAGS_RELEASE)
-			XTestFakeKeyEvent(xfi->display, keycode, False, 0);
-
-		pthread_mutex_unlock(&(xfp->mutex));
-#endif
-	}
-}
-
-void xf_peer_unicode_keyboard_event(rdpInput* input, uint16 code)
-{
-	printf("Client sent a unicode keyboard event (code:0x%X)\n", code);
-}
-
-void xf_peer_mouse_event(rdpInput* input, uint16 flags, uint16 x, uint16 y)
-{
-	int button = 0;
-	boolean down = false;
-	xfPeerContext* xfp = (xfPeerContext*) input->context;
-	xfInfo* xfi = xfp->info;
-
-	pthread_mutex_lock(&(xfp->mutex));
-#ifdef WITH_XTEST
-
-	if (flags & PTR_FLAGS_WHEEL)
-	{
-		boolean negative = false;
-
-		if (flags & PTR_FLAGS_WHEEL_NEGATIVE)
-			negative = true;
-
-		button = (negative) ? 5 : 4;
-
-		XTestFakeButtonEvent(xfi->display, button, True, 0);
-		XTestFakeButtonEvent(xfi->display, button, False, 0);
-	}
-	else
-	{
-		if (flags & PTR_FLAGS_MOVE)
-			XTestFakeMotionEvent(xfi->display, 0, x, y, 0);
-
-		if (flags & PTR_FLAGS_BUTTON1)
-			button = 1;
-		else if (flags & PTR_FLAGS_BUTTON2)
-			button = 3;
-		else if (flags & PTR_FLAGS_BUTTON3)
-			button = 2;
-
-		if (flags & PTR_FLAGS_DOWN)
-			down = true;
-
-		if (button != 0)
-			XTestFakeButtonEvent(xfi->display, button, down, 0);
-	}
-#endif
-	pthread_mutex_unlock(&(xfp->mutex));
-}
-
-void xf_peer_extended_mouse_event(rdpInput* input, uint16 flags, uint16 x, uint16 y)
-{
-	xfPeerContext* xfp = (xfPeerContext*) input->context;
-	xfInfo* xfi = xfp->info;
-
-	pthread_mutex_lock(&(xfp->mutex));
-#ifdef WITH_XTEST
-	XTestFakeMotionEvent(xfi->display, 0, x, y, CurrentTime);
-#endif
-	pthread_mutex_unlock(&(xfp->mutex));
-}
-
 void* xf_peer_main_loop(void* arg)
 {
 	int i;
@@ -804,29 +597,45 @@ void* xf_peer_main_loop(void* arg)
 	int rcount;
 	void* rfds[32];
 	fd_set rfds_set;
+	rdpSettings* settings;
+	char* server_file_path;
 	freerdp_peer* client = (freerdp_peer*) arg;
+	xfPeerContext* xfp;
 
 	memset(rfds, 0, sizeof(rfds));
 
 	printf("We've got a client %s\n", client->hostname);
 
 	xf_peer_init(client);
+	xfp = (xfPeerContext*) client->context;
+
+	settings = client->settings;
 
 	/* Initialize the real server settings here */
-	client->settings->cert_file = xstrdup("server.crt");
-	client->settings->privatekey_file = xstrdup("server.key");
-	client->settings->nla_security = false;
-	client->settings->rfx_codec = true;
+
+	if (settings->development_mode)
+	{
+		server_file_path = freerdp_construct_path(settings->development_path, "server/X11");
+	}
+	else
+	{
+		server_file_path = freerdp_construct_path(settings->config_path, "server");
+
+		if (!freerdp_check_file_exists(server_file_path))
+			freerdp_mkdir(server_file_path);
+	}
+
+	settings->cert_file = freerdp_construct_path(server_file_path, "server.crt");
+	settings->privatekey_file = freerdp_construct_path(server_file_path, "server.key");
+
+	settings->nla_security = false;
+	settings->rfx_codec = true;
 
 	client->Capabilities = xf_peer_capabilities;
 	client->PostConnect = xf_peer_post_connect;
 	client->Activate = xf_peer_activate;
 
-	client->input->SynchronizeEvent = xf_peer_synchronize_event;
-	client->input->KeyboardEvent = xf_peer_keyboard_event;
-	client->input->UnicodeKeyboardEvent = xf_peer_unicode_keyboard_event;
-	client->input->MouseEvent = xf_peer_mouse_event;
-	client->input->ExtendedMouseEvent = xf_peer_extended_mouse_event;
+	xf_input_register_callbacks(client->input);
 
 	client->Initialize(client);
 
@@ -889,6 +698,13 @@ void* xf_peer_main_loop(void* arg)
 	printf("Client %s disconnected.\n", client->hostname);
 
 	client->Disconnect(client);
+	
+	pthread_cancel(xfp->thread);
+	pthread_cancel(xfp->frame_rate_thread);
+	
+	pthread_join(xfp->thread, NULL);
+	pthread_join(xfp->frame_rate_thread, NULL);
+	
 	freerdp_peer_context_free(client);
 	freerdp_peer_free(client);
 

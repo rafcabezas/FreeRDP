@@ -418,6 +418,7 @@ static void update_send_synchronize(rdpContext* context)
 	rdpRdp* rdp = context->rdp;
 
 	s = fastpath_update_pdu_init(rdp->fastpath);
+	stream_write_zero(s, 2); /* pad2Octets (2 bytes) */
 	fastpath_send_update_pdu(rdp->fastpath, FASTPATH_UPDATETYPE_SYNCHRONIZE, s);
 }
 
@@ -552,6 +553,8 @@ rdpUpdate* update_new(rdpRdp* rdp)
 		deleteList->sIndices = 64;
 		deleteList->indices = xmalloc(deleteList->sIndices * 2);
 		deleteList->cIndices = 0;
+
+		update->SuppressOutput = update_send_suppress_output;
 	}
 
 	return update;

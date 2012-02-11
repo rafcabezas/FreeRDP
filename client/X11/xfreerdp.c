@@ -547,11 +547,7 @@ boolean xf_pre_connect(freerdp* instance)
 
 	xf_kbd_init(xfi);
 
-	xfi->clrconv = xnew(CLRCONV);
-	xfi->clrconv->alpha = true;
-	xfi->clrconv->invert = false;
-	xfi->clrconv->rgb555 = false;
-	xfi->clrconv->palette = xnew(rdpPalette);
+	xfi->clrconv = freerdp_clrconv_new(CLRCONV_ALPHA);
 
 	instance->context->cache = cache_new(instance->settings);
 
@@ -647,23 +643,7 @@ boolean xf_post_connect(freerdp* instance)
 		xfi->srcBpp = instance->settings->color_depth;
 		xf_gdi_register_update_callbacks(instance->update);
 
-		xfi->hdc = gdi_GetDC();
-		xfi->hdc->bitsPerPixel = xfi->bpp;
-		xfi->hdc->bytesPerPixel = xfi->bpp / 8;
-
-		xfi->hdc->alpha = xfi->clrconv->alpha;
-		xfi->hdc->invert = xfi->clrconv->invert;
-		xfi->hdc->rgb555 = xfi->clrconv->rgb555;
-
-		xfi->hdc->hwnd = (HGDI_WND) malloc(sizeof(GDI_WND));
-		xfi->hdc->hwnd->invalid = gdi_CreateRectRgn(0, 0, 0, 0);
-		xfi->hdc->hwnd->invalid->null = 1;
-
-		xfi->hdc->hwnd->count = 32;
-		xfi->hdc->hwnd->cinvalid = (HGDI_RGN) malloc(sizeof(GDI_RGN) * xfi->hdc->hwnd->count);
-		xfi->hdc->hwnd->ninvalid = 0;
-
-		xfi->primary_buffer = (uint8*) xzalloc(xfi->width * xfi->height * xfi->bpp);
+		xfi->hdc = gdi_CreateDC(xfi->clrconv, xfi->bpp);
 
 		if (instance->settings->rfx_codec)
 		{
@@ -755,6 +735,8 @@ boolean xf_authenticate(freerdp* instance, char** username, char** password, cha
 
 boolean xf_verify_certificate(freerdp* instance, char* subject, char* issuer, char* fingerprint)
 {
+	char answer;
+
 	printf("Certificate details:\n");
 	printf("\tSubject: %s\n", subject);
 	printf("\tIssuer: %s\n", issuer);
@@ -763,7 +745,6 @@ boolean xf_verify_certificate(freerdp* instance, char* subject, char* issuer, ch
 		"the CA certificate in your certificate store, or the certificate has expired. "
 		"Please look at the documentation on how to create local certificate store for a private CA.\n");
 
-	char answer;
 	while (1)
 	{
 		printf("Do you trust the above certificate? (Y/N) ");
@@ -777,6 +758,7 @@ boolean xf_verify_certificate(freerdp* instance, char* subject, char* issuer, ch
 		{
 			break;
 		}
+		printf("\n");
 	}
 
 	return false;
@@ -884,6 +866,9 @@ void xf_window_free(xfInfo* xfi)
 	XFreeGC(xfi->display, xfi->gc);
 	xfi->gc = 0;
 
+	XFreeGC(xfi->display, xfi->gc_mono);
+	xfi->gc_mono = 0;
+
 	if (xfi->window != NULL)
 	{
 		xf_DestroyWindow(xfi, xfi->window);
@@ -905,16 +890,11 @@ void xf_window_free(xfInfo* xfi)
 
 	if (context != NULL)
 	{
-		if (context->cache != NULL)
-		{
 			cache_free(context->cache);
 			context->cache = NULL;
-		}
-		if (context->rail != NULL)
-		{
+
 			rail_free(context->rail);
 			context->rail = NULL;
-		}
 	}
 
 	if (xfi->rfx_context) 
@@ -922,8 +902,11 @@ void xf_window_free(xfInfo* xfi)
 		rfx_context_free(xfi->rfx_context);
 		xfi->rfx_context = NULL;
 	}
-	
-	xfree(xfi->clrconv);
+
+	freerdp_clrconv_free(xfi->clrconv);
+
+	if (xfi->hdc)
+		gdi_DeleteDC(xfi->hdc);
 
 	xf_tsmf_uninit(xfi);
 	xf_cliprdr_uninit(xfi);
@@ -932,7 +915,11 @@ void xf_window_free(xfInfo* xfi)
 void xf_free(xfInfo* xfi)
 {
 	xf_window_free(xfi);
+
+	xfree(xfi->bmp_codec_none);
+
 	XCloseDisplay(xfi->display);
+
 	xfree(xfi);
 }
 
@@ -963,7 +950,7 @@ int xfreerdp_run(freerdp* instance)
 	xfi = ((xfContext*) instance->context)->xfi;
 	channels = instance->context->channels;
 
-	while (!xfi->disconnect)
+	while (!xfi->disconnect && !freerdp_shall_disconnect(instance))
 	{
 		rcount = 0;
 		wcount = 0;
@@ -1073,7 +1060,7 @@ void* thread_func(void* param)
         if (g_thread_count < 1)
                 freerdp_sem_signal(g_sem);
 
-	return NULL;
+	pthread_exit(NULL);
 }
 
 static uint8 exit_code_from_disconnect_reason(uint32 reason)

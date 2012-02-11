@@ -82,7 +82,7 @@ boolean rdp_client_connect(rdpRdp* rdp)
 
 	if ((selectedProtocol & PROTOCOL_TLS) || (selectedProtocol == PROTOCOL_RDP))
 	{
-		if ((settings->username != NULL) && (settings->password != NULL))
+		if ((settings->username != NULL) && ((settings->password != NULL) || (settings->password_cookie != NULL && settings->password_cookie->length > 0)))
 			settings->autologon = true;
 	}
 
@@ -141,40 +141,43 @@ boolean rdp_client_redirect(rdpRdp* rdp)
 	settings->redirected_session_id = redirection->sessionID;
 
 	if (redirection->flags & LB_LOAD_BALANCE_INFO)
+	{
 		nego_set_routing_token(rdp->nego, &redirection->loadBalanceInfo);
-
-	if (redirection->flags & LB_TARGET_NET_ADDRESS)
-	{
-		xfree(settings->hostname);
-		settings->hostname = redirection->targetNetAddress.ascii;
-        }
-	else if (redirection->flags & LB_TARGET_FQDN)
-	{
-		xfree(settings->hostname);
-		settings->hostname = redirection->targetFQDN.ascii;
 	}
-	else if (redirection->flags & LB_TARGET_NETBIOS_NAME)
+	else
 	{
-		xfree(settings->hostname);
-		settings->hostname = redirection->targetNetBiosName.ascii;
+		if (redirection->flags & LB_TARGET_NET_ADDRESS)
+		{
+			xfree(settings->hostname);
+			settings->hostname = xstrdup(redirection->targetNetAddress.ascii);
+		}
+		else if (redirection->flags & LB_TARGET_FQDN)
+		{
+			xfree(settings->hostname);
+			settings->hostname = xstrdup(redirection->targetFQDN.ascii);
+		}
+		else if (redirection->flags & LB_TARGET_NETBIOS_NAME)
+		{
+			xfree(settings->hostname);
+			settings->hostname = xstrdup(redirection->targetNetBiosName.ascii);
+		}
 	}
 
 	if (redirection->flags & LB_USERNAME)
 	{
 		xfree(settings->username);
-		settings->username = redirection->username.ascii;
+		settings->username = xstrdup(redirection->username.ascii);
 	}
 
 	if (redirection->flags & LB_DOMAIN)
 	{
 		xfree(settings->domain);
-		settings->domain = redirection->domain.ascii;
+		settings->domain = xstrdup(redirection->domain.ascii);
 	}
 
 	if (redirection->flags & LB_PASSWORD)
 	{
-		xfree(settings->password);
-		settings->password = redirection->password.ascii;
+		settings->password_cookie = &redirection->password_cookie;
 	}
 
 	return rdp_client_connect(rdp);
@@ -224,7 +227,7 @@ static boolean rdp_client_establish_keys(rdpRdp* rdp)
 	}
 
 	rdp->do_crypt = true;
-	if (rdp->settings->secure_checksum)
+	if (rdp->settings->salted_checksum)
 		rdp->do_secure_checksum = true;
 
 	if (rdp->settings->encryption_method == ENCRYPTION_METHOD_FIPS)
@@ -291,7 +294,7 @@ static boolean rdp_server_establish_keys(rdpRdp* rdp, STREAM* s)
 	}
 
 	rdp->do_crypt = true;
-	if (rdp->settings->secure_checksum)
+	if (rdp->settings->salted_checksum)
 		rdp->do_secure_checksum = true;
 
 	if (rdp->settings->encryption_method == ENCRYPTION_METHOD_FIPS)
@@ -446,6 +449,9 @@ boolean rdp_client_connect_demand_active(rdpRdp* rdp, STREAM* s)
 
 		return true;
 	}
+
+	if (rdp->disconnect)
+		return true;
 
 	if (!rdp_send_confirm_active(rdp))
 		return false;
