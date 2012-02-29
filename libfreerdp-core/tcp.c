@@ -132,6 +132,7 @@ boolean tcp_connect(rdpTcp* tcp, const char* hostname, uint16 port)
 	}
 
 	tcp->sockfd = -1;
+	int myErrno = 0;
 	for (ai = res; ai; ai = ai->ai_next)
 	{
 		tcp->sockfd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
@@ -142,20 +143,22 @@ boolean tcp_connect(rdpTcp* tcp, const char* hostname, uint16 port)
 		if (connect(tcp->sockfd, ai->ai_addr, ai->ai_addrlen) == 0)
 		{
 			freerdp_log(tcp->instance, "connected to %s:%s\n", hostname, servname);
+			myErrno = 0;
 			break;
 		}
-
-        if (errno == ETIMEDOUT)
-            freerdp_log(tcp->instance, "Error connecting to %s:%s. Connection Timeout", hostname, servname);
-        else if (errno == ECONNREFUSED)
-            freerdp_log(tcp->instance, "Error connecting to %s:%s. Connection Refused", hostname, servname);
-        else {
-            freerdp_log(tcp->instance, "Error connecting to %s:%s. %s", hostname, servname, strerror(errno));            
-        }
         
+		myErrno = errno;
+
 		close(tcp->sockfd);
 		tcp->sockfd = -1;
 	}
+    if (myErrno == ETIMEDOUT)
+        freerdp_log(tcp->instance, "Error connecting to %s:%s. Connection Timeout", hostname, servname);
+    else if (myErrno == ECONNREFUSED)
+        freerdp_log(tcp->instance, "Error connecting to %s:%s. Connection Refused", hostname, servname);
+    else if (myErrno != 0)
+        freerdp_log(tcp->instance, "Error connecting to %s:%s. %s", hostname, servname, strerror(errno));            
+    
 	freeaddrinfo(res);
 
 	if (tcp->sockfd == -1)
