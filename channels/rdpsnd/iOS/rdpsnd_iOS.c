@@ -63,7 +63,7 @@ struct iOS_device_data
 static void rdpsnd_ios_play(rdpsndDevicePlugin* device, uint8* data, int size)
 {
     rdpsndiOSPlugin* iOS_data;
-    int rc;
+    //int rc;
     
 	iOS_data = (rdpsndiOSPlugin*) device;
 	if (!iOS_data->context)
@@ -92,7 +92,7 @@ static void rdpsnd_ios_play(rdpsndDevicePlugin* device, uint8* data, int size)
     
 	LLOGLN(10, ("rdpsnd_iOS_play: size %d", size));
     
-    rc = iOSSoundPlay(iOS_data->context, (char *)src, size);
+    iOSSoundPlay(iOS_data->context, (char *)src, size);
     
 	if (decoded_data)
 		free(decoded_data);
