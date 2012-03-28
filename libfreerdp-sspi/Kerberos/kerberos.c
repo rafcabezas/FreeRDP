@@ -242,7 +242,7 @@ int krb_tcp_connect(KRB_CONTEXT* krb_ctx, KDCENTRY* entry)
 {
 	int sockfd;
 
-	sockfd = freerdp_tcp_connect(entry->kdchost, entry->port);
+	sockfd = freerdp_tcp_connect(krb_ctx->settings->instance, entry->kdchost, entry->port);
 
 	if (sockfd == -1)
 		return -1;
@@ -256,12 +256,12 @@ int krb_tcp_connect(KRB_CONTEXT* krb_ctx, KDCENTRY* entry)
 
 int krb_tcp_recv(KRB_CONTEXT* krb_ctx, uint8* data, uint32 length)
 {
-	return freerdp_tcp_read(krb_ctx->ksockfd, data, length);
+	return freerdp_tcp_read(krb_ctx->settings->instance, krb_ctx->ksockfd, data, length);
 }
 
 int krb_tcp_send(KRB_CONTEXT* krb_ctx, uint8* data, uint32 length)
 {
-	return freerdp_tcp_write(krb_ctx->ksockfd, data, length);
+	return freerdp_tcp_write(krb_ctx->settings->instance, krb_ctx->ksockfd, data, length);
 }
 
 KRB_CONTEXT* kerberos_ContextNew()

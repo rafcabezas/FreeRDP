@@ -20,13 +20,14 @@
 #ifndef FREERDP_TCP_UTILS_H
 #define FREERDP_TCP_UTILS_H
 
+#include "freerdp.h"
 #include <freerdp/api.h>
 #include <freerdp/types.h>
 
-FREERDP_API int freerdp_tcp_connect(const char* hostname, int port);
-FREERDP_API int freerdp_tcp_read(int sockfd, uint8* data, int length);
-FREERDP_API int freerdp_tcp_write(int sockfd, uint8* data, int length);
-FREERDP_API int freerdp_tcp_disconnect(int sockfd);
+FREERDP_API int freerdp_tcp_connect(freerdp* instance, const char* hostname, int port);
+FREERDP_API int freerdp_tcp_read(freerdp* instance, int sockfd, uint8* data, int length);
+FREERDP_API int freerdp_tcp_write(freerdp* instance, int sockfd, uint8* data, int length);
+FREERDP_API int freerdp_tcp_disconnect(freerdp* instance, int sockfd);
 
 FREERDP_API int freerdp_tcp_set_no_delay(int sockfd, boolean no_delay);
 

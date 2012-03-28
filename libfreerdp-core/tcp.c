@@ -115,56 +115,8 @@ boolean tcp_connect(rdpTcp* tcp, const char* hostname, uint16 port)
 	uint32 option_value;
 	socklen_t option_len;
 
-	tcp->sockfd = freerdp_tcp_connect(hostname, port);
+	tcp->sockfd = freerdp_tcp_connect(tcp->instance, hostname, port);
 
-#if 0
-    <<<<<<< HEAD
-	snprintf(servname, sizeof(servname), "%d", port);
-	status = getaddrinfo(hostname, servname, &hints, &res);
-
-	if (status != 0)
-	{
-		freerdp_log(tcp->instance, "transport_connect: getaddrinfo (%s)\n", gai_strerror(status));
-		return false;
-	}
-
-	tcp->sockfd = -1;
-	int myErrno = 0;
-	for (ai = res; ai; ai = ai->ai_next)
-	{
-		tcp->sockfd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
-
-		if (tcp->sockfd < 0)
-			continue;
-
-		if (connect(tcp->sockfd, ai->ai_addr, ai->ai_addrlen) == 0)
-		{
-			freerdp_log(tcp->instance, "connected to %s:%s\n", hostname, servname);
-			myErrno = 0;
-			break;
-		}
-        
-		myErrno = errno;
-
-		close(tcp->sockfd);
-		tcp->sockfd = -1;
-	}
-    if (myErrno == ETIMEDOUT)
-        freerdp_log(tcp->instance, "Error connecting to %s:%s. Connection Timeout", hostname, servname);
-    else if (myErrno == ECONNREFUSED)
-        freerdp_log(tcp->instance, "Error connecting to %s:%s. Connection Refused", hostname, servname);
-    else if (myErrno != 0)
-        freerdp_log(tcp->instance, "Error connecting to %s:%s. %s", hostname, servname, strerror(errno));            
-    
-	freeaddrinfo(res);
-
-	if (tcp->sockfd == -1)
-	{
-		freerdp_log(tcp->instance, "unable to connect to %s:%s\n", hostname, servname);
-		return false;
-	}
-=======
-#endif
 	if (tcp->sockfd < 0)
 		return false;
 
@@ -193,51 +145,17 @@ boolean tcp_connect(rdpTcp* tcp, const char* hostname, uint16 port)
 
 int tcp_read(rdpTcp* tcp, uint8* data, int length)
 {
-#if 0
-    <<<<<<< HEAD
-	int status;
-
-	status = recv(tcp->sockfd, data, length, 0);
-
-	if (status == 0)
-	{
-		/* Peer disconnected. */
-        freerdp_log(tcp->instance, "tcp_read: Connection Closed");
-		return -1;
-	}
-	else if (status < 0)
-	{
-#ifdef _WIN32
-		int wsa_error = WSAGetLastError();
-
-		/* No data available */
-		if (wsa_error == WSAEWOULDBLOCK)
-			return 0;
-
-        freerdp_log(tcp->instance, "recv() error: %d\n", wsa_error);
-#else
-		/* No data available */
-		if (errno == EAGAIN || errno == EWOULDBLOCK)
-			return 0;
-
-        freerdp_log(tcp->instance, "tcp_read: Connection Closed");
-#endif
-		return -1;
-	}
-
-	return status;
-#endif
-	return freerdp_tcp_read(tcp->sockfd, data, length);
+	return freerdp_tcp_read(tcp->instance, tcp->sockfd, data, length);
 }
 
 int tcp_write(rdpTcp* tcp, uint8* data, int length)
 {
-	return freerdp_tcp_write(tcp->sockfd, data, length);
+	return freerdp_tcp_write(tcp->instance, tcp->sockfd, data, length);
 }
 
 boolean tcp_disconnect(rdpTcp* tcp)
 {
-	freerdp_tcp_disconnect(tcp->sockfd);
+	freerdp_tcp_disconnect(tcp->instance, tcp->sockfd);
 	tcp->sockfd = -1;
 
 	return true;

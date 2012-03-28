@@ -34,6 +34,7 @@
 #define getcwd			_getcwd
 #endif
 
+#include "freerdp_config.h"
 #include <freerdp/utils/file.h>
 #include <freerdp/utils/windows.h>
 
@@ -55,8 +56,9 @@
 #define SHARED_LIB_SUFFIX	".so"
 #endif
 
-//#define FREERDP_CONFIG_DIR	".freerdp"
-#define FREERDP_CONFIG_DIR	"/dev/null/"
+#ifndef FREERDP_CONFIG_DIR
+#define FREERDP_CONFIG_DIR	".freerdp"
+#endif
 
 #define PARENT_PATH		".." PATH_SEPARATOR_STR
 
