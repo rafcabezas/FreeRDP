@@ -39,16 +39,27 @@ void update_gdi_memblt(rdpContext* context, MEMBLT_ORDER* memblt)
 
 void update_gdi_mem3blt(rdpContext* context, MEM3BLT_ORDER* mem3blt)
 {
+	uint8 style;
 	rdpBitmap* bitmap;
 	rdpCache* cache = context->cache;
+	rdpBrush* brush = &mem3blt->brush;
 
 	if (mem3blt->cacheId == 0xFF)
 		bitmap = offscreen_cache_get(cache->offscreen, mem3blt->cacheIndex);
 	else
 		bitmap = bitmap_cache_get(cache->bitmap, (uint8) mem3blt->cacheId, mem3blt->cacheIndex);
 
+	style = brush->style;
+
+	if (brush->style & CACHED_BRUSH)
+	{
+		brush->data = brush_cache_get(cache->brush, brush->index, &brush->bpp);
+		brush->style = 0x03;
+	}
+
 	mem3blt->bitmap = bitmap;
 	IFCALL(cache->bitmap->Mem3Blt, context, mem3blt);
+	brush->style = style;
 }
 
 void update_gdi_cache_bitmap(rdpContext* context, CACHE_BITMAP_ORDER* cache_bitmap)
@@ -162,9 +173,10 @@ rdpBitmap* bitmap_cache_get(rdpBitmapCache* bitmap_cache, uint32 id, uint32 inde
 	}
 
 	if (index == BITMAP_CACHE_WAITING_LIST_INDEX)
-		index = bitmap_cache->cells[id].number - 1;
-
-	if (index > bitmap_cache->cells[id].number)
+	{
+		index = bitmap_cache->cells[id].number;
+	}
+	else if (index > bitmap_cache->cells[id].number)
 	{
 		printf("get invalid bitmap index %d in cell id: %d\n", index, id);
 		return NULL;
@@ -184,9 +196,10 @@ void bitmap_cache_put(rdpBitmapCache* bitmap_cache, uint32 id, uint32 index, rdp
 	}
 
 	if (index == BITMAP_CACHE_WAITING_LIST_INDEX)
-		index = bitmap_cache->cells[id].number - 1;
-
-	if (index > bitmap_cache->cells[id].number)
+	{
+		index = bitmap_cache->cells[id].number;
+	}
+	else if (index > bitmap_cache->cells[id].number)
 	{
 		printf("put invalid bitmap index %d in cell id: %d\n", index, id);
 		return;
@@ -244,7 +257,8 @@ rdpBitmapCache* bitmap_cache_new(rdpSettings* settings)
 		for (i = 0; i < (int) bitmap_cache->maxCells; i++)
 		{
 			bitmap_cache->cells[i].number = settings->bitmapCacheV2CellInfo[i].numEntries;
-			bitmap_cache->cells[i].entries = (rdpBitmap**) xzalloc(sizeof(rdpBitmap*) * bitmap_cache->cells[i].number);
+			/* allocate an extra entry for BITMAP_CACHE_WAITING_LIST_INDEX */
+			bitmap_cache->cells[i].entries = (rdpBitmap**) xzalloc(sizeof(rdpBitmap*) * bitmap_cache->cells[i].number + 1);
 		}
 	}
 
@@ -260,7 +274,7 @@ void bitmap_cache_free(rdpBitmapCache* bitmap_cache)
 	{
 		for (i = 0; i < (int) bitmap_cache->maxCells; i++)
 		{
-			for (j = 0; j < (int) bitmap_cache->cells[i].number; j++)
+			for (j = 0; j < (int) bitmap_cache->cells[i].number + 1; j++)
 			{
 				bitmap = bitmap_cache->cells[i].entries[j];
 

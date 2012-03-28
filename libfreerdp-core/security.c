@@ -262,14 +262,17 @@ void security_salted_mac_signature(rdpRdp *rdp, uint8* data, uint32 length, bool
 
 	security_uint32_le(length_le, length); /* length must be little-endian */
 	if (encryption)
-		security_uint32_le(use_count_le, rdp->encrypt_use_count);
+	{
+		security_uint32_le(use_count_le, rdp->encrypt_checksum_use_count);
+	}
 	else
 	{
 		/*
 		 * We calculate checksum on plain text, so we must have already
-		 * decrypt it, which means decrypt_use_count is off by one.
+		 * decrypt it, which means decrypt_checksum_use_count is
+		 * off by one.
 		 */
-		security_uint32_le(use_count_le, rdp->decrypt_use_count - 1);
+		security_uint32_le(use_count_le, rdp->decrypt_checksum_use_count - 1);
 	}
 
 	/* SHA1_Digest = SHA1(MACKeyN + pad1 + length + data) */
@@ -358,6 +361,9 @@ boolean security_establish_keys(uint8* client_random, rdpRdp* rdp)
 
 		printf("FIPS Compliant encryption level.\n");
 
+		/* disable fastpath input; it doesnt handle FIPS encryption yet */
+		rdp->settings->fastpath_input = false;
+
 		sha1 = crypto_sha1_init();
 		crypto_sha1_update(sha1, client_random + 16, 16);
 		crypto_sha1_update(sha1, server_random + 16, 16);
@@ -414,6 +420,10 @@ boolean security_establish_keys(uint8* client_random, rdpRdp* rdp)
 
 	memcpy(rdp->decrypt_update_key, rdp->decrypt_key, 16);
 	memcpy(rdp->encrypt_update_key, rdp->encrypt_key, 16);
+	rdp->decrypt_use_count = 0;
+	rdp->decrypt_checksum_use_count = 0;
+	rdp->encrypt_use_count =0;
+	rdp->encrypt_checksum_use_count =0;
 
 	return true;
 }
@@ -458,7 +468,8 @@ boolean security_encrypt(uint8* data, int length, rdpRdp* rdp)
 		rdp->encrypt_use_count = 0;
 	}
 	crypto_rc4(rdp->rc4_encrypt_key, length, data, data);
-	rdp->encrypt_use_count += 1;
+	rdp->encrypt_use_count++;
+	rdp->encrypt_checksum_use_count++;
 	return true;
 }
 
@@ -473,6 +484,7 @@ boolean security_decrypt(uint8* data, int length, rdpRdp* rdp)
 	}
 	crypto_rc4(rdp->rc4_decrypt_key, length, data, data);
 	rdp->decrypt_use_count += 1;
+	rdp->decrypt_checksum_use_count++;
 	return true;
 }
 

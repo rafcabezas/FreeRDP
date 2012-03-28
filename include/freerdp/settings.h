@@ -144,9 +144,6 @@ typedef struct
 
 /* Certificates */
 
-typedef struct rdp_certificate rdpCertificate;
-typedef struct rdp_key rdpKey;
-
 struct rdp_CertBlob
 {
 	uint32 length;
@@ -173,6 +170,15 @@ struct rdp_certificate
 	rdpCertInfo cert_info;
 	rdpX509CertChain* x509_cert_chain;
 };
+typedef struct rdp_certificate rdpCertificate;
+
+struct rdp_key
+{
+	rdpBlob modulus;
+	rdpBlob private_exponent;
+	uint8 exponent[4];
+};
+typedef struct rdp_key rdpKey;
 
 /* Channels */
 
@@ -270,7 +276,9 @@ struct rdp_settings
 	boolean compression; /* 59 */
 	uint32 performance_flags; /* 60 */
 	rdpBlob* password_cookie; /* 61 */
-	uint32 paddingC[80 - 62]; /* 62 */
+	char* kerberos_kdc; /* 62 */
+	char* kerberos_realm; /* 63 */
+	uint32 paddingC[80 - 64]; /* 64 */
 
 	/* User Interface Parameters */
 	boolean sw_gdi; /* 80 */
@@ -309,7 +317,9 @@ struct rdp_settings
 	boolean console_audio; /* 160 */
 	boolean console_session; /* 161 */
 	uint32 redirected_session_id; /* 162 */
-	uint32 paddingG[176 - 163]; /* 163 */
+	boolean audio_playback; /* 163 */
+	boolean audio_capture; /* 164 */
+	uint32 paddingG[176 - 165]; /* 165 */
 
 	/* Output Control */
 	boolean refresh_rect; /* 176 */

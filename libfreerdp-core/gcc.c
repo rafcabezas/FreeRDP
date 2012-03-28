@@ -461,14 +461,15 @@ void gcc_write_user_data_header(STREAM* s, uint16 type, uint16 length)
 
 boolean gcc_read_client_core_data(STREAM* s, rdpSettings* settings, uint16 blockLength)
 {
+	char* str;
 	uint32 version;
+	uint32 color_depth;
 	uint16 colorDepth = 0;
 	uint16 postBeta2ColorDepth = 0;
 	uint16 highColorDepth = 0;
 	uint16 supportedColorDepths = 0;
 	uint16 earlyCapabilityFlags = 0;
 	uint32 serverSelectedProtocol = 0;
-	char* str;
 
 	/* Length of all required fields, until imeFileName */
 	if (blockLength < 128)
@@ -483,7 +484,7 @@ boolean gcc_read_client_core_data(STREAM* s, rdpSettings* settings, uint16 block
 	stream_seek_uint16(s); /* SASSequence (Secure Access Sequence) */
 	stream_read_uint32(s, settings->kbd_layout); /* keyboardLayout */
 	stream_read_uint32(s, settings->client_build); /* clientBuild */
-	
+
 	/* clientName (32 bytes, null-terminated unicode, truncated to 15 characters) */
 	str = freerdp_uniconv_in(settings->uniconv, stream_get_tail(s), 32);
 	stream_seek(s, 32);
@@ -565,25 +566,25 @@ boolean gcc_read_client_core_data(STREAM* s, rdpSettings* settings, uint16 block
 	} while (0);
 
 	if (highColorDepth > 0)
-		settings->color_depth = highColorDepth;
+		color_depth = highColorDepth;
 	else if (postBeta2ColorDepth > 0)
 	{
 		switch (postBeta2ColorDepth)
 		{
 			case RNS_UD_COLOR_4BPP:
-				settings->color_depth = 4;
+				color_depth = 4;
 				break;
 			case RNS_UD_COLOR_8BPP:
-				settings->color_depth = 8;
+				color_depth = 8;
 				break;
 			case RNS_UD_COLOR_16BPP_555:
-				settings->color_depth = 15;
+				color_depth = 15;
 				break;
 			case RNS_UD_COLOR_16BPP_565:
-				settings->color_depth = 16;
+				color_depth = 16;
 				break;
 			case RNS_UD_COLOR_24BPP:
-				settings->color_depth = 24;
+				color_depth = 24;
 				break;
 			default:
 				return false;
@@ -594,15 +595,22 @@ boolean gcc_read_client_core_data(STREAM* s, rdpSettings* settings, uint16 block
 		switch (colorDepth)
 		{
 			case RNS_UD_COLOR_4BPP:
-				settings->color_depth = 4;
+				color_depth = 4;
 				break;
 			case RNS_UD_COLOR_8BPP:
-				settings->color_depth = 8;
+				color_depth = 8;
 				break;
 			default:
 				return false;
 		}
 	}
+
+	/*
+	 * If we are in server mode, accepth client's color depth only if
+	 * it is smaller than ours. This is what Windows server does.
+	 */
+	if (color_depth < settings->color_depth || !settings->server_mode)
+		settings->color_depth = color_depth;
 
 	return true;
 }
@@ -842,6 +850,40 @@ static const uint8 initial_signature[] =
 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01
+};
+
+/*
+ * Terminal Services Signing Keys.
+ * Yes, Terminal Services Private Key is publicly available.
+ */
+
+const uint8 tssk_modulus[] =
+{
+	0x3d, 0x3a, 0x5e, 0xbd, 0x72, 0x43, 0x3e, 0xc9,
+	0x4d, 0xbb, 0xc1, 0x1e, 0x4a, 0xba, 0x5f, 0xcb,
+	0x3e, 0x88, 0x20, 0x87, 0xef, 0xf5, 0xc1, 0xe2,
+	0xd7, 0xb7, 0x6b, 0x9a, 0xf2, 0x52, 0x45, 0x95,
+	0xce, 0x63, 0x65, 0x6b, 0x58, 0x3a, 0xfe, 0xef,
+	0x7c, 0xe7, 0xbf, 0xfe, 0x3d, 0xf6, 0x5c, 0x7d,
+	0x6c, 0x5e, 0x06, 0x09, 0x1a, 0xf5, 0x61, 0xbb,
+	0x20, 0x93, 0x09, 0x5f, 0x05, 0x6d, 0xea, 0x87
+};
+
+const uint8 tssk_privateExponent[] =
+{
+	0x87, 0xa7, 0x19, 0x32, 0xda, 0x11, 0x87, 0x55,
+	0x58, 0x00, 0x16, 0x16, 0x25, 0x65, 0x68, 0xf8,
+	0x24, 0x3e, 0xe6, 0xfa, 0xe9, 0x67, 0x49, 0x94,
+	0xcf, 0x92, 0xcc, 0x33, 0x99, 0xe8, 0x08, 0x60,
+	0x17, 0x9a, 0x12, 0x9f, 0x24, 0xdd, 0xb1, 0x24,
+	0x99, 0xc7, 0x3a, 0xb8, 0x0a, 0x7b, 0x0d, 0xdd,
+	0x35, 0x07, 0x79, 0x17, 0x0b, 0x51, 0x9b, 0xb3,
+	0xc7, 0x10, 0x01, 0x13, 0xe7, 0x3f, 0xf3, 0x5f
+};
+
+const uint8 tssk_exponent[] =
+{
+	0x5b, 0x7b, 0x88, 0xc0
 };
 
 void gcc_write_server_security_data(STREAM* s, rdpSettings* settings)

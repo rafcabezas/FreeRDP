@@ -35,16 +35,16 @@
 #endif
 
 #include <freerdp/utils/file.h>
+#include <freerdp/utils/windows.h>
 
 #ifndef _WIN32
 #define PATH_SEPARATOR_STR	"/"
 #define PATH_SEPARATOR_CHR	'/'
 #define HOME_ENV_VARIABLE	"HOME"
 #else
-#include <windows.h>
 #define PATH_SEPARATOR_STR	"\\"
 #define PATH_SEPARATOR_CHR	'\\'
-#define HOME_ENV_VARIABLE	"HOMEPATH"
+#define HOME_ENV_VARIABLE	"HOME"
 #endif
 
 #ifdef _WIN32
@@ -55,7 +55,8 @@
 #define SHARED_LIB_SUFFIX	".so"
 #endif
 
-#define FREERDP_CONFIG_DIR	".freerdp"
+//#define FREERDP_CONFIG_DIR	".freerdp"
+#define FREERDP_CONFIG_DIR	"/dev/null/"
 
 #define PARENT_PATH		".." PATH_SEPARATOR_STR
 
@@ -82,23 +83,24 @@ char* freerdp_get_home_path(rdpSettings* settings)
 {
 	if (settings->home_path == NULL)
 		settings->home_path = getenv(HOME_ENV_VARIABLE);
+	if (settings->home_path == NULL)
+		settings->home_path = xstrdup("/");
 
 	return settings->home_path;
 }
 
 char* freerdp_get_config_path(rdpSettings* settings)
 {
-	char* path;
+	if (settings->config_path != NULL)
+		return settings->config_path;
 
-	path = (char*) xmalloc(strlen(settings->home_path) + sizeof(FREERDP_CONFIG_DIR) + 2);
-	sprintf(path, "%s/%s", settings->home_path, FREERDP_CONFIG_DIR);
+	settings->config_path = (char*) xmalloc(strlen(settings->home_path) + sizeof(FREERDP_CONFIG_DIR) + 2);
+	sprintf(settings->config_path, "%s" PATH_SEPARATOR_STR "%s", settings->home_path, FREERDP_CONFIG_DIR);
 
-	if (!freerdp_check_file_exists(path))
-		freerdp_mkdir(path);
+	if (!freerdp_check_file_exists(settings->config_path))
+		freerdp_mkdir(settings->config_path);
 
-	settings->config_path = path;
-
-	return path;
+	return settings->config_path;
 }
 
 char* freerdp_get_current_path(rdpSettings* settings)
@@ -155,7 +157,8 @@ char* freerdp_append_shared_library_suffix(char* file_path)
 	}
 	else
 	{
-		path = xstrdup(file_path);
+		path = xmalloc(file_path_length + shared_lib_suffix_length + 1);
+		sprintf(path, "%s%s", file_path, SHARED_LIB_SUFFIX);	
 	}
 
 	return path;

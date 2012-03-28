@@ -20,22 +20,25 @@
 #include "rdp.h"
 
 #include "info.h"
-#include "per.h"
 #include "redirection.h"
+#include "mppc_enc.h"
 
+#include <freerdp/crypto/per.h>
+
+#ifdef WITH_DEBUG_RDP
 static const char* const DATA_PDU_TYPE_STRINGS[] =
 {
-		"", "", /* 0x00 - 0x01 */
+		"?", "?", /* 0x00 - 0x01 */
 		"Update", /* 0x02 */
-		"", "", "", "", "", "", "", "", /* 0x03 - 0x0A */
-		"", "", "", "", "", "", "", "", "", /* 0x0B - 0x13 */
+		"?", "?", "?", "?", "?", "?", "?", "?", /* 0x03 - 0x0A */
+		"?", "?", "?", "?", "?", "?", "?", "?", "?", /* 0x0B - 0x13 */
 		"Control", /* 0x14 */
-		"", "", "", "", "", "", /* 0x15 - 0x1A */
+		"?", "?", "?", "?", "?", "?", /* 0x15 - 0x1A */
 		"Pointer", /* 0x1B */
 		"Input", /* 0x1C */
-		"", "", /* 0x1D - 0x1E */
+		"?", "?", /* 0x1D - 0x1E */
 		"Synchronize", /* 0x1F */
-		"", /* 0x20 */
+		"?", /* 0x20 */
 		"Refresh Rect", /* 0x21 */
 		"Play Sound", /* 0x22 */
 		"Suppress Output", /* 0x23 */
@@ -45,7 +48,7 @@ static const char* const DATA_PDU_TYPE_STRINGS[] =
 		"Font List", /* 0x27 */
 		"Font Map", /* 0x28 */
 		"Set Keyboard Indicators", /* 0x29 */
-		"", /* 0x2A */
+		"?", /* 0x2A */
 		"Bitmap Cache Persistent List", /* 0x2B */
 		"Bitmap Cache Error", /* 0x2C */
 		"Set Keyboard IME Status", /* 0x2D */
@@ -54,12 +57,13 @@ static const char* const DATA_PDU_TYPE_STRINGS[] =
 		"Draw Nine Grid Error", /* 0x30 */
 		"Draw GDI+ Error", /* 0x31 */
 		"ARC Status", /* 0x32 */
-		"", "", "", /* 0x33 - 0x35 */
+		"?", "?", "?", /* 0x33 - 0x35 */
 		"Status Info", /* 0x36 */
 		"Monitor Layout" /* 0x37 */
-		"", "", "", /* 0x38 - 0x40 */
-		"", "", "", "", "", "" /* 0x41 - 0x46 */
+		"?", "?", "?", /* 0x38 - 0x40 */
+		"?", "?", "?", "?", "?", "?" /* 0x41 - 0x46 */
 };
+#endif
 
 /**
  * Read RDP Security Header.\n
@@ -130,19 +134,8 @@ boolean rdp_read_share_data_header(STREAM* s, uint16* length, uint8* type, uint3
 	stream_seek_uint8(s); /* streamId (1 byte) */
 	stream_read_uint16(s, *length); /* uncompressedLength (2 bytes) */
 	stream_read_uint8(s, *type); /* pduType2, Data PDU Type (1 byte) */
-
-	if (*type & 0x80)
-	{
-		stream_read_uint8(s, *compressed_type); /* compressedType (1 byte) */
-		stream_read_uint16(s, *compressed_len); /* compressedLength (2 bytes) */
-	}
-	else
-	{
-		stream_seek(s, 3);
-		*compressed_type = 0;
-		*compressed_len = 0;
-	}
-
+	stream_read_uint8(s, *compressed_type); /* compressedType (1 byte) */
+	stream_read_uint16(s, *compressed_len); /* compressedLength (2 bytes) */
 	return true;
 }
 
@@ -242,6 +235,7 @@ boolean rdp_read_header(rdpRdp* rdp, STREAM* s, uint16* length, uint16* channel_
 		uint8 reason;
 
 		(void) per_read_enumerated(s, &reason, 0);
+		DEBUG_RDP("DisconnectProviderUltimatum from server, reason code 0x%02x\n", reason);
 
 		rdp->disconnect = true;
 
@@ -471,47 +465,71 @@ void rdp_recv_set_error_info_data_pdu(rdpRdp* rdp, STREAM* s)
 		rdp_print_errinfo(rdp->errorInfo);
 }
 
-void rdp_recv_data_pdu(rdpRdp* rdp, STREAM* s)
+boolean rdp_recv_data_pdu(rdpRdp* rdp, STREAM* s)
 {
 	uint8 type;
 	uint16 length;
 	uint32 share_id;
 	uint8 compressed_type;
 	uint16 compressed_len;
+	uint32 roff;
+	uint32 rlen;
+	STREAM* comp_stream;
 
 	rdp_read_share_data_header(s, &length, &type, &share_id, &compressed_type, &compressed_len);
 
+	comp_stream = s;
+
+	if (compressed_type & PACKET_COMPRESSED)
+	{
+		if (decompress_rdp(rdp, s->p, compressed_len - 18, compressed_type, &roff, &rlen))
+		{
+			comp_stream = stream_new(0);
+			comp_stream->data = rdp->mppc->history_buf + roff;
+			comp_stream->p = comp_stream->data;
+			comp_stream->size = rlen;
+		}
+		else
+		{
+			printf("decompress_rdp() failed\n");
+			return false;
+		}
+		stream_seek(s, compressed_len - 18);
+	}
+
 #ifdef WITH_DEBUG_RDP
-	if (type != DATA_PDU_TYPE_UPDATE)
-		printf("recv %s Data PDU (0x%02X), length:%d\n", DATA_PDU_TYPE_STRINGS[type], type, length);
+	/* if (type != DATA_PDU_TYPE_UPDATE) */
+		DEBUG_RDP("recv %s Data PDU (0x%02X), length:%d",
+				type < ARRAY_SIZE(DATA_PDU_TYPE_STRINGS) ? DATA_PDU_TYPE_STRINGS[type] : "???", type, length);
 #endif
 
 	switch (type)
 	{
 		case DATA_PDU_TYPE_UPDATE:
-			update_recv(rdp->update, s);
+			if (!update_recv(rdp->update, comp_stream))
+				return false;
 			break;
 
 		case DATA_PDU_TYPE_CONTROL:
-			rdp_recv_server_control_pdu(rdp, s);
+			rdp_recv_server_control_pdu(rdp, comp_stream);
 			break;
 
 		case DATA_PDU_TYPE_POINTER:
-			update_recv_pointer(rdp->update, s);
+			update_recv_pointer(rdp->update, comp_stream);
 			break;
 
 		case DATA_PDU_TYPE_INPUT:
 			break;
 
 		case DATA_PDU_TYPE_SYNCHRONIZE:
-			rdp_recv_synchronize_pdu(rdp, s);
+			rdp_recv_synchronize_pdu(rdp, comp_stream);
 			break;
 
 		case DATA_PDU_TYPE_REFRESH_RECT:
 			break;
 
 		case DATA_PDU_TYPE_PLAY_SOUND:
-			update_recv_play_sound(rdp->update, s);
+			update_recv_play_sound(rdp->update, comp_stream);
 			break;
 
 		case DATA_PDU_TYPE_SUPPRESS_OUTPUT:
@@ -524,14 +542,14 @@ void rdp_recv_data_pdu(rdpRdp* rdp, STREAM* s)
 			break;
 
 		case DATA_PDU_TYPE_SAVE_SESSION_INFO:
-			rdp_recv_save_session_info(rdp, s);
+			rdp_recv_save_session_info(rdp, comp_stream);
 			break;
 
 		case DATA_PDU_TYPE_FONT_LIST:
 			break;
 
 		case DATA_PDU_TYPE_FONT_MAP:
-			rdp_recv_font_map_pdu(rdp, s);
+			rdp_recv_font_map_pdu(rdp, comp_stream);
 			break;
 
 		case DATA_PDU_TYPE_SET_KEYBOARD_INDICATORS:
@@ -550,7 +568,7 @@ void rdp_recv_data_pdu(rdpRdp* rdp, STREAM* s)
 			break;
 
 		case DATA_PDU_TYPE_SET_ERROR_INFO:
-			rdp_recv_set_error_info_data_pdu(rdp, s);
+			rdp_recv_set_error_info_data_pdu(rdp, comp_stream);
 			break;
 
 		case DATA_PDU_TYPE_DRAW_NINEGRID_ERROR:
@@ -571,6 +589,14 @@ void rdp_recv_data_pdu(rdpRdp* rdp, STREAM* s)
 		default:
 			break;
 	}
+
+	if (comp_stream != s)
+	{
+		stream_detach(comp_stream);
+		stream_free(comp_stream);
+	}
+
+	return true;
 }
 
 boolean rdp_recv_out_of_sequence_pdu(rdpRdp* rdp, STREAM* s)
@@ -583,8 +609,7 @@ boolean rdp_recv_out_of_sequence_pdu(rdpRdp* rdp, STREAM* s)
 
 	if (type == PDU_TYPE_DATA)
 	{
-		rdp_recv_data_pdu(rdp, s);
-		return true;
+		return rdp_recv_data_pdu(rdp, s);
 	}
 	else if (type == PDU_TYPE_SERVER_REDIRECTION)
 	{
@@ -676,6 +701,7 @@ static boolean rdp_recv_tpkt_pdu(rdpRdp* rdp, STREAM* s)
 	uint16 pduSource;
 	uint16 channelId;
 	uint16 securityFlags;
+	uint8* nextp;
 
 	if (!rdp_read_header(rdp, s, &length, &channelId))
 	{
@@ -712,28 +738,38 @@ static boolean rdp_recv_tpkt_pdu(rdpRdp* rdp, STREAM* s)
 	}
 	else
 	{
-		rdp_read_share_control_header(s, &pduLength, &pduType, &pduSource);
-
-		rdp->settings->pdu_source = pduSource;
-
-		switch (pduType)
+		while (stream_get_left(s) > 3)
 		{
-			case PDU_TYPE_DATA:
-				rdp_recv_data_pdu(rdp, s);
-				break;
+			stream_get_mark(s, nextp);
+			rdp_read_share_control_header(s, &pduLength, &pduType, &pduSource);
+			nextp += pduLength;
 
-			case PDU_TYPE_DEACTIVATE_ALL:
-				if (!rdp_recv_deactivate_all(rdp, s))
-					return false;
-				break;
+			rdp->settings->pdu_source = pduSource;
 
-			case PDU_TYPE_SERVER_REDIRECTION:
-				rdp_recv_enhanced_security_redirection_packet(rdp, s);
-				break;
+			switch (pduType)
+			{
+				case PDU_TYPE_DATA:
+					if (!rdp_recv_data_pdu(rdp, s))
+					{
+						printf("rdp_recv_data_pdu failed\n");
+						return false;
+					}
+					break;
 
-			default:
-				printf("incorrect PDU type: 0x%04X\n", pduType);
-				break;
+				case PDU_TYPE_DEACTIVATE_ALL:
+					if (!rdp_recv_deactivate_all(rdp, s))
+						return false;
+					break;
+
+				case PDU_TYPE_SERVER_REDIRECTION:
+					rdp_recv_enhanced_security_redirection_packet(rdp, s);
+					break;
+
+				default:
+					printf("incorrect PDU type: 0x%04X\n", pduType);
+					break;
+			}
+			stream_set_mark(s, nextp);
 		}
 	}
 
@@ -858,7 +894,7 @@ void rdp_set_blocking_mode(rdpRdp* rdp, boolean blocking)
 
 int rdp_check_fds(rdpRdp* rdp)
 {
-	return transport_check_fds(rdp->transport);
+	return transport_check_fds(&(rdp->transport));
 }
 
 /**
@@ -888,6 +924,7 @@ rdpRdp* rdp_new(freerdp* instance)
 		rdp->mcs = mcs_new(rdp->transport);
 		rdp->redirection = redirection_new();
 		rdp->mppc = mppc_new(rdp);
+		rdp->mppc_enc = mppc_enc_new(PROTO_RDP_50);
 	}
 
 	return rdp;
@@ -907,8 +944,8 @@ void rdp_free(rdpRdp* rdp)
 		crypto_des3_free(rdp->fips_encrypt);
 		crypto_des3_free(rdp->fips_decrypt);
 		crypto_hmac_free(rdp->fips_hmac);
-		extension_free(rdp->extension);
 		settings_free(rdp->settings);
+		extension_free(rdp->extension);
 		transport_free(rdp->transport);
 		license_free(rdp->license);
 		input_free(rdp->input);
@@ -918,6 +955,7 @@ void rdp_free(rdpRdp* rdp)
 		mcs_free(rdp->mcs);
 		redirection_free(rdp->redirection);
 		mppc_free(rdp);
+		mppc_enc_free(rdp->mppc_enc);
 		xfree(rdp);
 	}
 }

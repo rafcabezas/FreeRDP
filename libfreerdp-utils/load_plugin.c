@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,10 +27,10 @@
 #include <freerdp/utils/memory.h>
 #include <freerdp/utils/load_plugin.h>
 #include "freerdp_config.h"
+#include <freerdp/utils/windows.h>
 
 #ifdef _WIN32
 
-#include <windows.h>
 #define DLOPEN(f) LoadLibraryA(f)
 #define DLSYM(f, n) GetProcAddress(f, n)
 #define DLCLOSE(f) FreeLibrary(f)
@@ -129,7 +131,7 @@ void* freerdp_load_plugin(const char* name, const char* entry_name)
 	if (!freerdp_path_contains_separator(suffixed_name))
 	{
 		/* no explicit path given, use default path */
-		path = freerdp_construct_path(PLUGIN_PATH, suffixed_name);
+		path = freerdp_construct_path(FREERDP_PLUGIN_PATH, suffixed_name);
 	}
 	else
 	{
@@ -165,7 +167,7 @@ void* freerdp_load_channel_plugin(rdpSettings* settings, const char* name, const
 
 		if (!settings->development_mode)
 		{
-			path = freerdp_construct_path(PLUGIN_PATH, suffixed_name);
+			path = freerdp_construct_path(FREERDP_PLUGIN_PATH, suffixed_name);
 		}
 		else
 		{

@@ -30,6 +30,7 @@
 #undef BIG_ENDIAN
 
 //Remoter:
+#define FREERDP_KEYMAP_PATH ""
 #define PLUGIN_PATH ""
 #define EXT_PATH    ""
 #define KEYMAP_PATH ""

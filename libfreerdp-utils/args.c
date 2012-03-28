@@ -1,4 +1,4 @@
-/**
+/*
  * FreeRDP: A Remote Desktop Protocol client.
  * Arguments Parsing
  *
@@ -69,7 +69,6 @@ int freerdp_parse_args(rdpSettings* settings, int argc, char** argv,
 				"  -h: print this help\n"
 				"  -k: set keyboard layout ID\n"
 				"  -K: do not interfere with window manager bindings\n"
-				"  -m: don't send mouse motion events\n"
 				"  -n: hostname\n"
 				"  -o: console audio\n"
 				"  -p: password\n"
@@ -83,6 +82,7 @@ int freerdp_parse_args(rdpSettings* settings, int argc, char** argv,
 				"  --ext: load an extension\n"
 				"  --no-auth: disable authentication\n"
 				"  --no-fastpath: disable fast-path\n"
+				"  --no-motion: don't send mouse motion events\n"
 				"  --gdi: graphics rendering (hw, sw)\n"
 				"  --no-osb: disable offscreen bitmaps\n"
 				"  --no-bmp-cache: disable bitmap cache\n"
@@ -101,6 +101,7 @@ int freerdp_parse_args(rdpSettings* settings, int argc, char** argv,
 				"  --ntlm: force NTLM authentication protocol version (1 or 2)\n"
 				"  --ignore-certificate: ignore verification of logon certificate\n"
 				"  --sec: force protocol security (rdp, tls or nla)\n"
+				"  --kbd-list: list all keyboard layout ids used by -k\n"
 				"  --salted-checksum: use salted checksums with Standard RDP encryption\n"
 				"  --version: print version information\n"
 				"\n", argv[0]);
@@ -542,6 +543,8 @@ int freerdp_parse_args(rdpSettings* settings, int argc, char** argv,
 				return FREERDP_ARGS_PARSE_FAILURE;
 			}
 			plugin_data = NULL;
+			if (strstr(argv[t], "rdpsnd"))
+				settings->audio_playback = true;
 			if (index < argc - 1 && strcmp("--data", argv[index + 1]) == 0)
 			{
 				index += 2;
@@ -552,6 +555,9 @@ int freerdp_parse_args(rdpSettings* settings, int argc, char** argv,
 						plugin_data = (RDP_PLUGIN_DATA*) xmalloc(sizeof(RDP_PLUGIN_DATA) * (i + 2));
 					else
 						plugin_data = (RDP_PLUGIN_DATA*) xrealloc(plugin_data, sizeof(RDP_PLUGIN_DATA) * (i + 2));
+
+					if (strstr(argv[t], "drdynvc") && strstr(argv[index], "audin"))
+						settings->audio_capture = true;
 
 					plugin_data[i].size = sizeof(RDP_PLUGIN_DATA);
 					plugin_data[i].data[0] = NULL;
@@ -595,7 +601,7 @@ int freerdp_parse_args(rdpSettings* settings, int argc, char** argv,
 				printf("missing extension name\n");
 				return FREERDP_ARGS_PARSE_FAILURE;
 			}
-			if (num_extensions >= sizeof(settings->extensions) / sizeof(struct rdp_ext_set))
+			if (num_extensions >= ARRAY_SIZE(settings->extensions))
 			{
 				printf("maximum extensions reached\n");
 				return FREERDP_ARGS_PARSE_FAILURE;

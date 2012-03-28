@@ -125,3 +125,48 @@ char* xstrdup(const char* str)
 
 	return mem;
 }
+
+/**
+ * Duplicate a string in memory.
+ * @param wstr
+ * @return
+ */
+
+wchar_t* xwcsdup(const wchar_t* wstr)
+{
+	wchar_t* mem;
+
+	if (wstr == NULL)
+		return NULL;
+
+#ifdef _WIN32
+	mem = _wcsdup(wstr);
+#else
+	mem = wcsdup(wstr);
+#endif
+
+	if (mem == NULL)
+		perror("wstrdup");
+
+	return mem;
+}
+
+char* xstrtoup(const char* str)
+{
+	char* out;
+	char* p;
+	int c;
+	out = xstrdup(str);
+	if(out != NULL)
+	{
+		p = out;
+		while(*p != '\0')
+		{
+			c = toupper((unsigned char)*p);
+			*p++ = (char)c;
+		}
+		return out;
+	}
+	else
+		return NULL;
+}

@@ -27,7 +27,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <sys/select.h>
-#include <freerdp/kbd/kbd.h>
+#include <freerdp/locale/keyboard.h>
 #include <freerdp/codec/color.h>
 #include <freerdp/utils/file.h>
 #include <freerdp/utils/sleep.h>
@@ -249,7 +249,7 @@ xfInfo* xf_info_init()
 
 	xfi->bytesPerPixel = 4;
 
-	freerdp_kbd_init(xfi->display, 0);
+	freerdp_keyboard_init(0);
 
 	return xfi;
 }
@@ -262,7 +262,7 @@ void xf_peer_context_new(freerdp_peer* client, xfPeerContext* context)
 	context->rfx_context->width = context->info->width;
 	context->rfx_context->height = context->info->height;
 
-	rfx_context_set_pixel_format(context->rfx_context, RFX_PIXEL_FORMAT_BGRA);
+	rfx_context_set_pixel_format(context->rfx_context, RDP_PIXEL_FORMAT_B8G8R8A8);
 
 	context->s = stream_new(65536);
 }
@@ -413,20 +413,19 @@ void xf_peer_rfx_update(freerdp_peer* client, int x, int y, int width, int heigh
 
 	if (xfi->use_xshm)
 	{
-		width = x + width;
-		height = y + height;
-		x = 0;
-		y = 0;
-
-		rect.x = x;
-		rect.y = y;
+		/**
+		 * Passing an offset source rectangle to rfx_compose_message()
+		 * leads to protocol errors, so offset the data pointer instead.
+		 */
+		rect.x = 0;
+		rect.y = 0;
 		rect.width = width;
 		rect.height = height;
 
 		image = xf_snapshot(xfp, x, y, width, height);
 
 		data = (uint8*) image->data;
-		data = &data[(y * image->bytes_per_line) + (x * image->bits_per_pixel)];
+		data = &data[(y * image->bytes_per_line) + (x * image->bits_per_pixel / 8)];
 
 		rfx_compose_message(xfp->rfx_context, s, &rect, 1, data,
 				width, height, image->bytes_per_line);
@@ -556,6 +555,12 @@ boolean xf_peer_post_connect(freerdp_peer* client)
 	printf("Client requested desktop: %dx%dx%d\n",
 		client->settings->width, client->settings->height, client->settings->color_depth);
 
+	if (!client->settings->rfx_codec)
+	{
+		printf("Client does not support RemoteFX\n");
+		return 0;
+	}
+
 	/* A real server should tag the peer as activated here and start sending updates in mainloop. */
 
 	client->settings->width = xfi->width;
@@ -629,6 +634,7 @@ void* xf_peer_main_loop(void* arg)
 	settings->privatekey_file = freerdp_construct_path(server_file_path, "server.key");
 
 	settings->nla_security = false;
+
 	settings->rfx_codec = true;
 
 	client->Capabilities = xf_peer_capabilities;

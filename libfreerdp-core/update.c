@@ -32,7 +32,7 @@ static const char* const UPDATE_TYPE_STRINGS[] =
 };
 */
 
-void update_recv_orders(rdpUpdate* update, STREAM* s)
+boolean update_recv_orders(rdpUpdate* update, STREAM* s)
 {
 	uint16 numberOrders;
 
@@ -42,9 +42,12 @@ void update_recv_orders(rdpUpdate* update, STREAM* s)
 
 	while (numberOrders > 0)
 	{
-		update_recv_order(update, s);
+		if (!update_recv_order(update, s))
+			return false;
 		numberOrders--;
 	}
+
+	return true;
 }
 
 void update_read_bitmap_data(STREAM* s, BITMAP_DATA* bitmap_data)
@@ -175,6 +178,17 @@ void update_read_pointer_color(STREAM* s, POINTER_COLOR_UPDATE* pointer_color)
 	stream_read_uint16(s, pointer_color->lengthAndMask); /* lengthAndMask (2 bytes) */
 	stream_read_uint16(s, pointer_color->lengthXorMask); /* lengthXorMask (2 bytes) */
 
+	/**
+	 * There does not seem to be any documentation on why
+	 * xPos / yPos can be larger than width / height
+	 * so it is missing in documentation or a bug in implementation
+	 * 2.2.9.1.1.4.4 Color Pointer Update (TS_COLORPOINTERATTRIBUTE)
+	 */
+	if (pointer_color->xPos >= pointer_color->width)
+		pointer_color->xPos = 0;
+	if (pointer_color->yPos >= pointer_color->height)
+		pointer_color->yPos = 0;
+
 	if (pointer_color->lengthXorMask > 0)
 	{
 		pointer_color->xorMaskData = (uint8*) xmalloc(pointer_color->lengthXorMask);
@@ -243,7 +257,7 @@ void update_recv_pointer(rdpUpdate* update, STREAM* s)
 	}
 }
 
-void update_recv(rdpUpdate* update, STREAM* s)
+boolean update_recv(rdpUpdate* update, STREAM* s)
 {
 	uint16 updateType;
 	rdpContext* context = update->context;
@@ -257,7 +271,11 @@ void update_recv(rdpUpdate* update, STREAM* s)
 	switch (updateType)
 	{
 		case UPDATE_TYPE_ORDERS:
-			update_recv_orders(update, s);
+			if (!update_recv_orders(update, s))
+			{
+				/* XXX: Do we have to call EndPaint? */
+				return false;
+			}
 			break;
 
 		case UPDATE_TYPE_BITMAP:
@@ -278,19 +296,7 @@ void update_recv(rdpUpdate* update, STREAM* s)
 
 	IFCALL(update->EndPaint, context);
 
-	if (stream_get_left(s) > RDP_SHARE_DATA_HEADER_LENGTH)
-	{
-		uint16 pduType;
-		uint16 length;
-		uint16 source;
-
-		rdp_read_share_control_header(s, &length, &pduType, &source);
-
-		if (pduType != PDU_TYPE_DATA)
-			return;
-
-		rdp_recv_data_pdu(update->context->rdp, s);
-	}
+	return true;
 }
 
 void update_reset_state(rdpUpdate* update)
@@ -570,6 +576,8 @@ void update_free(rdpUpdate* update)
 
 		xfree(update->bitmap_update.rectangles);
 		xfree(update->pointer);
+		xfree(update->primary->polyline.points);
+		xfree(update->primary->polygon_sc.points);
 		xfree(update->primary);
 		xfree(update->secondary);
 		xfree(update->altsec);

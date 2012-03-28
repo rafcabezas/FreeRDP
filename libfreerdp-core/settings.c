@@ -18,6 +18,8 @@
  */
 
 #include "freerdp_config.h"
+#include "config.h"
+#include "certificate.h"
 #include "capabilities.h"
 #include <freerdp/utils/memory.h>
 

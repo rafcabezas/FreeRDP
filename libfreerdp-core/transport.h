@@ -30,8 +30,8 @@ typedef enum
 typedef struct rdp_transport rdpTransport;
 
 #include "tcp.h"
-#include "tls.h"
-#include "credssp.h"
+#include <freerdp/crypto/tls.h>
+#include <freerdp/sspi/credssp.h>
 
 #include <time.h>
 #include <freerdp/types.h>
@@ -73,7 +73,7 @@ boolean transport_accept_nla(rdpTransport* transport);
 int transport_read(rdpTransport* transport, STREAM* s);
 int transport_write(rdpTransport* transport, STREAM* s);
 void transport_get_fds(rdpTransport* transport, void** rfds, int* rcount);
-int transport_check_fds(rdpTransport* transport);
+int transport_check_fds(rdpTransport** ptransport);
 boolean transport_set_blocking_mode(rdpTransport* transport, boolean blocking);
 rdpTransport* transport_new(freerdp* instance);
 void transport_free(rdpTransport* transport);

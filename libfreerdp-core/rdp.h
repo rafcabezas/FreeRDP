@@ -20,6 +20,7 @@
 #ifndef __RDP_H
 #define __RDP_H
 
+#include "config.h"
 #include "mcs.h"
 #include "tpkt.h"
 #include "fastpath.h"
@@ -134,10 +135,13 @@ struct rdp_rdp
 	struct rdp_transport* transport;
 	struct rdp_extension* extension;
 	struct rdp_mppc* mppc;
+	struct rdp_mppc_enc* mppc_enc;
 	struct crypto_rc4_struct* rc4_decrypt_key;
 	int decrypt_use_count;
+	int decrypt_checksum_use_count;
 	struct crypto_rc4_struct* rc4_encrypt_key;
 	int encrypt_use_count;
+	int encrypt_checksum_use_count;
 	struct crypto_des3_struct* fips_encrypt;
 	struct crypto_des3_struct* fips_decrypt;
 	struct crypto_hmac_struct* fips_hmac;
@@ -179,7 +183,7 @@ boolean rdp_send_pdu(rdpRdp* rdp, STREAM* s, uint16 type, uint16 channel_id);
 
 STREAM* rdp_data_pdu_init(rdpRdp* rdp);
 boolean rdp_send_data_pdu(rdpRdp* rdp, STREAM* s, uint8 type, uint16 channel_id);
-void rdp_recv_data_pdu(rdpRdp* rdp, STREAM* s);
+boolean rdp_recv_data_pdu(rdpRdp* rdp, STREAM* s);
 
 boolean rdp_send(rdpRdp* rdp, STREAM* s, uint16 channel_id);
 void rdp_recv(rdpRdp* rdp);

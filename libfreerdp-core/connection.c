@@ -1,4 +1,4 @@
-/**
+/*
  * FreeRDP: A Remote Desktop Protocol Client
  * Connection Sequence
  *
@@ -17,46 +17,46 @@
  * limitations under the License.
  */
 
-#include "per.h"
 #include "info.h"
 #include "input.h"
 
 #include "connection.h"
 
 /**
- *                                      Connection Sequence
- *     client                                                                    server
- *        |                                                                         |
- *        |-----------------------X.224 Connection Request PDU--------------------->|
- *        |<----------------------X.224 Connection Confirm PDU----------------------|
- *        |-------MCS Connect-Initial PDU with GCC Conference Create Request------->|
- *        |<-----MCS Connect-Response PDU with GCC Conference Create Response-------|
- *        |------------------------MCS Erect Domain Request PDU-------------------->|
- *        |------------------------MCS Attach User Request PDU--------------------->|
- *        |<-----------------------MCS Attach User Confirm PDU----------------------|
- *        |------------------------MCS Channel Join Request PDU-------------------->|
- *        |<-----------------------MCS Channel Join Confirm PDU---------------------|
- *        |----------------------------Security Exchange PDU----------------------->|
- *        |-------------------------------Client Info PDU-------------------------->|
- *        |<---------------------License Error PDU - Valid Client-------------------|
- *        |<-----------------------------Demand Active PDU--------------------------|
- *        |------------------------------Confirm Active PDU------------------------>|
- *        |-------------------------------Synchronize PDU-------------------------->|
- *        |---------------------------Control PDU - Cooperate---------------------->|
- *        |------------------------Control PDU - Request Control------------------->|
- *        |--------------------------Persistent Key List PDU(s)-------------------->|
- *        |--------------------------------Font List PDU--------------------------->|
- *        |<------------------------------Synchronize PDU---------------------------|
- *        |<--------------------------Control PDU - Cooperate-----------------------|
- *        |<-----------------------Control PDU - Granted Control--------------------|
- *        |<-------------------------------Font Map PDU-----------------------------|
+ *                                      Connection Sequence\n
+ *     client                                                                    server\n
+ *        |                                                                         |\n
+ *        |-----------------------X.224 Connection Request PDU--------------------->|\n
+ *        |<----------------------X.224 Connection Confirm PDU----------------------|\n
+ *        |-------MCS Connect-Initial PDU with GCC Conference Create Request------->|\n
+ *        |<-----MCS Connect-Response PDU with GCC Conference Create Response-------|\n
+ *        |------------------------MCS Erect Domain Request PDU-------------------->|\n
+ *        |------------------------MCS Attach User Request PDU--------------------->|\n
+ *        |<-----------------------MCS Attach User Confirm PDU----------------------|\n
+ *        |------------------------MCS Channel Join Request PDU-------------------->|\n
+ *        |<-----------------------MCS Channel Join Confirm PDU---------------------|\n
+ *        |----------------------------Security Exchange PDU----------------------->|\n
+ *        |-------------------------------Client Info PDU-------------------------->|\n
+ *        |<---------------------License Error PDU - Valid Client-------------------|\n
+ *        |<-----------------------------Demand Active PDU--------------------------|\n
+ *        |------------------------------Confirm Active PDU------------------------>|\n
+ *        |-------------------------------Synchronize PDU-------------------------->|\n
+ *        |---------------------------Control PDU - Cooperate---------------------->|\n
+ *        |------------------------Control PDU - Request Control------------------->|\n
+ *        |--------------------------Persistent Key List PDU(s)-------------------->|\n
+ *        |--------------------------------Font List PDU--------------------------->|\n
+ *        |<------------------------------Synchronize PDU---------------------------|\n
+ *        |<--------------------------Control PDU - Cooperate-----------------------|\n
+ *        |<-----------------------Control PDU - Granted Control--------------------|\n
+ *        |<-------------------------------Font Map PDU-----------------------------|\n
  *
  */
 
 /**
- * Establish RDP Connection.\n
+ * Establish RDP Connection based on the settings given in the 'rdp' paremeter.
  * @msdn{cc240452}
  * @param rdp RDP module
+ * @return true if the connection succeeded. false otherwise.
  */
 
 boolean rdp_client_connect(rdpRdp* rdp)
@@ -128,11 +128,23 @@ boolean rdp_client_redirect(rdpRdp* rdp)
 
 	rdp_client_disconnect(rdp);
 
+	/* FIXME: this is a subset of rdp_free */
+	crypto_rc4_free(rdp->rc4_decrypt_key);
+	crypto_rc4_free(rdp->rc4_encrypt_key);
+	crypto_des3_free(rdp->fips_encrypt);
+	crypto_des3_free(rdp->fips_decrypt);
+	crypto_hmac_free(rdp->fips_hmac);
 	mcs_free(rdp->mcs);
 	nego_free(rdp->nego);
 	license_free(rdp->license);
 	transport_free(rdp->transport);
-	rdp->transport = transport_new(rdp->instance);
+
+	/* FIXME: this is a subset of settings_free */
+	freerdp_blob_free(settings->server_random);
+	freerdp_blob_free(settings->server_certificate);
+	xfree(settings->ip_address);
+
+	rdp->transport = transport_new(settings);
 	rdp->license = license_new(rdp);
 	rdp->nego = nego_new(rdp->transport);
 	rdp->mcs = mcs_new(rdp->transport);
@@ -502,7 +514,7 @@ boolean rdp_client_connect_finalize(rdpRdp* rdp)
 
 boolean rdp_server_accept_nego(rdpRdp* rdp, STREAM* s)
 {
-	boolean ret;
+	boolean status;
 
 	transport_set_blocking_mode(rdp->transport, true);
 
@@ -547,15 +559,15 @@ boolean rdp_server_accept_nego(rdpRdp* rdp, STREAM* s)
 	if (!nego_send_negotiation_response(rdp->nego))
 		return false;
 
-	ret = false;
+	status = false;
 	if (rdp->nego->selected_protocol & PROTOCOL_NLA)
-		ret = transport_accept_nla(rdp->transport);
+		status = transport_accept_nla(rdp->transport);
 	else if (rdp->nego->selected_protocol & PROTOCOL_TLS)
-		ret = transport_accept_tls(rdp->transport);
+		status = transport_accept_tls(rdp->transport);
 	else if (rdp->nego->selected_protocol == PROTOCOL_RDP) /* 0 */
-		ret = transport_accept_rdp(rdp->transport);
+		status = transport_accept_rdp(rdp->transport);
 
-	if (!ret)
+	if (!status)
 		return false;
 
 	transport_set_blocking_mode(rdp->transport, false);

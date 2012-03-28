@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+#include "timezone.h"
+
 #include "info.h"
 
 #define INFO_TYPE_LOGON			0x00000000
@@ -33,182 +35,6 @@ static const char* const INFO_TYPE_LOGON_STRINGS[] =
 	"Logon Extended Info"
 };
 */
-
-/**
- * Read SYSTEM_TIME structure (TS_SYSTEMTIME).\n
- * @msdn{cc240478}
- * @param s stream
- * @param system_time system time structure
- */
-
-void rdp_read_system_time(STREAM* s, SYSTEM_TIME* system_time)
-{
-	stream_read_uint16(s, system_time->wYear); /* wYear, must be set to 0 */
-	stream_read_uint16(s, system_time->wMonth); /* wMonth */
-	stream_read_uint16(s, system_time->wDayOfWeek); /* wDayOfWeek */
-	stream_read_uint16(s, system_time->wDay); /* wDay */
-	stream_read_uint16(s, system_time->wHour); /* wHour */
-	stream_read_uint16(s, system_time->wMinute); /* wMinute */
-	stream_read_uint16(s, system_time->wSecond); /* wSecond */
-	stream_read_uint16(s, system_time->wMilliseconds); /* wMilliseconds */
-}
-
-/**
- * Write SYSTEM_TIME structure (TS_SYSTEMTIME).\n
- * @msdn{cc240478}
- * @param s stream
- * @param system_time system time structure
- */
-
-void rdp_write_system_time(STREAM* s, SYSTEM_TIME* system_time)
-{
-	stream_write_uint16(s, system_time->wYear); /* wYear, must be set to 0 */
-	stream_write_uint16(s, system_time->wMonth); /* wMonth */
-	stream_write_uint16(s, system_time->wDayOfWeek); /* wDayOfWeek */
-	stream_write_uint16(s, system_time->wDay); /* wDay */
-	stream_write_uint16(s, system_time->wHour); /* wHour */
-	stream_write_uint16(s, system_time->wMinute); /* wMinute */
-	stream_write_uint16(s, system_time->wSecond); /* wSecond */
-	stream_write_uint16(s, system_time->wMilliseconds); /* wMilliseconds */
-}
-
-/**
- * Get client time zone information.\n
- * @param s stream
- * @param settings settings
- */
-
-void rdp_get_client_time_zone(STREAM* s, rdpSettings* settings)
-{
-	time_t t;
-	struct tm* local_time;
-	TIME_ZONE_INFO* clientTimeZone;
-
-	time(&t);
-	local_time = localtime(&t);
-	clientTimeZone = settings->client_time_zone;
-
-#if defined(sun)
-	if(local_time->tm_isdst > 0)
-		clientTimeZone->bias = (uint32) (altzone / 3600);
-	else
-		clientTimeZone->bias = (uint32) (timezone / 3600);
-#elif defined(HAVE_TM_GMTOFF)
-	if(local_time->tm_gmtoff >= 0)
-		clientTimeZone->bias = (uint32) (local_time->tm_gmtoff / 60);
-	else
-		clientTimeZone->bias = (uint32) ((-1 * local_time->tm_gmtoff) / 60 + 720);
-#else
-	clientTimeZone->bias = 0;
-#endif
-
-	if(local_time->tm_isdst > 0)
-	{
-		clientTimeZone->standardBias = clientTimeZone->bias - 60;
-		clientTimeZone->daylightBias = clientTimeZone->bias;
-	}
-	else
-	{
-		clientTimeZone->standardBias = clientTimeZone->bias;
-		clientTimeZone->daylightBias = clientTimeZone->bias + 60;
-	}
-
-	strftime(clientTimeZone->standardName, 32, "%Z, Standard Time", local_time);
-	clientTimeZone->standardName[31] = 0;
-	strftime(clientTimeZone->daylightName, 32, "%Z, Summer Time", local_time);
-	clientTimeZone->daylightName[31] = 0;
-}
-
-/**
- * Read client time zone information (TS_TIME_ZONE_INFORMATION).\n
- * @msdn{cc240477}
- * @param s stream
- * @param settings settings
- */
-
-boolean rdp_read_client_time_zone(STREAM* s, rdpSettings* settings)
-{
-	char* str;
-	TIME_ZONE_INFO* clientTimeZone;
-
-	if (stream_get_left(s) < 172)
-		return false;
-
-	clientTimeZone = settings->client_time_zone;
-
-	stream_read_uint32(s, clientTimeZone->bias); /* Bias */
-
-	/* standardName (64 bytes) */
-	str = freerdp_uniconv_in(settings->uniconv, stream_get_tail(s), 64);
-	stream_seek(s, 64);
-	strncpy(clientTimeZone->standardName, str, sizeof(clientTimeZone->standardName));
-	xfree(str);
-
-	rdp_read_system_time(s, &clientTimeZone->standardDate); /* StandardDate */
-	stream_read_uint32(s, clientTimeZone->standardBias); /* StandardBias */
-
-	/* daylightName (64 bytes) */
-	str = freerdp_uniconv_in(settings->uniconv, stream_get_tail(s), 64);
-	stream_seek(s, 64);
-	strncpy(clientTimeZone->daylightName, str, sizeof(clientTimeZone->daylightName));
-	xfree(str);
-
-	rdp_read_system_time(s, &clientTimeZone->daylightDate); /* DaylightDate */
-	stream_read_uint32(s, clientTimeZone->daylightBias); /* DaylightBias */
-
-	return true;
-}
-
-/**
- * Write client time zone information (TS_TIME_ZONE_INFORMATION).\n
- * @msdn{cc240477}
- * @param s stream
- * @param settings settings
- */
-
-void rdp_write_client_time_zone(STREAM* s, rdpSettings* settings)
-{
-	size_t length;
-	uint8* standardName;
-	uint8* daylightName;
-	size_t standardNameLength;
-	size_t daylightNameLength;
-	TIME_ZONE_INFO* clientTimeZone;
-
-	rdp_get_client_time_zone(s, settings);
-	clientTimeZone = settings->client_time_zone;
-
-	standardName = (uint8*) freerdp_uniconv_out(settings->uniconv, clientTimeZone->standardName, &length);
-	standardNameLength = length;
-
-	daylightName = (uint8*) freerdp_uniconv_out(settings->uniconv, clientTimeZone->daylightName, &length);
-	daylightNameLength = length;
-
-	if (standardNameLength > 62)
-		standardNameLength = 62;
-
-	if (daylightNameLength > 62)
-		daylightNameLength = 62;
-
-	stream_write_uint32(s, clientTimeZone->bias); /* Bias */
-
-	/* standardName (64 bytes) */
-	stream_write(s, standardName, standardNameLength);
-	stream_write_zero(s, 64 - standardNameLength);
-
-	rdp_write_system_time(s, &clientTimeZone->standardDate); /* StandardDate */
-	stream_write_uint32(s, clientTimeZone->standardBias); /* StandardBias */
-
-	/* daylightName (64 bytes) */
-	stream_write(s, daylightName, daylightNameLength);
-	stream_write_zero(s, 64 - daylightNameLength);
-
-	rdp_write_system_time(s, &clientTimeZone->daylightDate); /* DaylightDate */
-	stream_write_uint32(s, clientTimeZone->daylightBias); /* DaylightBias */
-
-	xfree(standardName);
-	xfree(daylightName);
-}
 
 /**
  * Read Server Auto Reconnect Cookie (ARC_SC_PRIVATE_PACKET).\n
@@ -243,10 +69,10 @@ boolean rdp_read_client_auto_reconnect_cookie(STREAM* s, rdpSettings* settings)
 	if (stream_get_left(s) < 28)
 		return false;
 
-	stream_write_uint32(s, autoReconnectCookie->cbLen); /* cbLen (4 bytes) */
-	stream_write_uint32(s, autoReconnectCookie->version); /* version (4 bytes) */
-	stream_write_uint32(s, autoReconnectCookie->logonId); /* LogonId (4 bytes) */
-	stream_write(s, autoReconnectCookie->securityVerifier, 16); /* SecurityVerifier */
+	stream_read_uint32(s, autoReconnectCookie->cbLen); /* cbLen (4 bytes) */
+	stream_read_uint32(s, autoReconnectCookie->version); /* version (4 bytes) */
+	stream_read_uint32(s, autoReconnectCookie->logonId); /* LogonId (4 bytes) */
+	stream_read(s, autoReconnectCookie->securityVerifier, 16); /* SecurityVerifier */
 
 	return true;
 }
@@ -473,7 +299,6 @@ void rdp_write_info_packet(STREAM* s, rdpSettings* settings)
 	uint16 cbUserName;
 	uint8* password;
 	uint16 cbPassword;
-	size_t passwordLength;
 	uint8* alternateShell;
 	uint16 cbAlternateShell;
 	uint8* workingDir;
@@ -486,8 +311,13 @@ void rdp_write_info_packet(STREAM* s, rdpSettings* settings)
 		INFO_LOGONNOTIFY |
 		INFO_MAXIMIZESHELL |
 		INFO_ENABLEWINDOWSKEY |
-		INFO_DISABLECTRLALTDEL |
-		RNS_INFO_AUDIOCAPTURE;
+		INFO_DISABLECTRLALTDEL;
+
+	if (settings->audio_capture)
+		flags |= RNS_INFO_AUDIOCAPTURE;
+
+	if (!settings->audio_playback)
+		flags |= INFO_NOAUDIOPLAYBACK;
 
 	if (settings->autologon)
 		flags |= INFO_AUTOLOGON;
@@ -499,7 +329,7 @@ void rdp_write_info_packet(STREAM* s, rdpSettings* settings)
 		flags |= INFO_REMOTECONSOLEAUDIO;
 
 	if (settings->compression)
-		flags |= INFO_COMPRESSION | INFO_PACKET_COMPR_TYPE_64K;
+		flags |= INFO_COMPRESSION | INFO_PACKET_COMPR_TYPE_RDP6;
 
 	domain = (uint8*)freerdp_uniconv_out(settings->uniconv, settings->domain, &length);
 	cbDomain = length;
@@ -511,13 +341,12 @@ void rdp_write_info_packet(STREAM* s, rdpSettings* settings)
 	{
 		usedPasswordCookie = true;
 		password = (uint8*)settings->password_cookie->data;
-		passwordLength = settings->password_cookie->length;
-		cbPassword = passwordLength - 2;
+		cbPassword = settings->password_cookie->length - 2;	/* Strip double zero termination */
 	}
 	else
 	{
-		password = (uint8*)freerdp_uniconv_out(settings->uniconv, settings->password, &passwordLength);
-		cbPassword = passwordLength;
+		password = (uint8*)freerdp_uniconv_out(settings->uniconv, settings->password, &length);
+		cbPassword = length;
 	}
 
 	alternateShell = (uint8*)freerdp_uniconv_out(settings->uniconv, settings->shell, &length);
@@ -544,7 +373,7 @@ void rdp_write_info_packet(STREAM* s, rdpSettings* settings)
 	stream_write_uint16(s, 0);
 
 	if (cbPassword > 0)
-		stream_write(s, password, passwordLength);
+		stream_write(s, password, cbPassword);
 	stream_write_uint16(s, 0);
 
 	if (cbAlternateShell > 0)

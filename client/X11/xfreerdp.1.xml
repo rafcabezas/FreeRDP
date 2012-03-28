@@ -138,14 +138,6 @@
         </listitem>
       </varlistentry>
       <varlistentry>
-        <term>-m</term>
-        <listitem>
-          <para>
-            Don't send mouse motion events.
-          </para>
-        </listitem>
-      </varlistentry>
-      <varlistentry>
         <term>-n <replaceable class="parameter">hostname</replaceable></term>
         <listitem>
           <para>
@@ -299,6 +291,14 @@
         </listitem>
       </varlistentry>
       <varlistentry>
+        <term>--no-motion</term>
+        <listitem>
+          <para>
+            Don't send mouse motion events.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
         <term>--gdi</term>
         <listitem>
           <para>
@@ -439,6 +439,14 @@
         <listitem>
           <para>
             ignore verification of logon certificate.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>--kbd-list</term>
+        <listitem>
+          <para>
+            list all keyboard layout ids used by -k
           </para>
         </listitem>
       </varlistentry>

@@ -24,6 +24,7 @@ set(CMAKE_COLOR_MAKEFILE ON)
 # Include cmake modules
 include(CheckIncludeFiles)
 include(CheckLibraryExists)
+include(CheckStructHasMember)
 include(FindPkgConfig)
 include(TestBigEndian)
 
@@ -48,8 +49,8 @@ if(NOT CMAKE_BUILD_TYPE)
    set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-# build shared libs
-if(NOT BUILD_SHARED_LIBS)
+# Default to build shared libs
+if(NOT DEFINED BUILD_SHARED_LIBS)
     set(BUILD_SHARED_LIBS ON)
 endif()
 
@@ -86,9 +87,6 @@ if(MSVC)
 endif()
 
 # Include files
-check_include_files(sys/param.h HAVE_SYS_PARAM_H)
-check_include_files(sys/socket.h HAVE_SYS_SOCKET_H)
-check_include_files(netdb.h HAVE_NETDB_H)
 check_include_files(fcntl.h HAVE_FCNTL_H)
 check_include_files(unistd.h HAVE_UNISTD_H)
 check_include_files(limits.h HAVE_LIMITS_H)
@@ -96,14 +94,18 @@ check_include_files(stdint.h HAVE_STDINT_H)
 check_include_files(stdbool.h HAVE_STDBOOL_H)
 check_include_files(inttypes.h HAVE_INTTYPES_H)
 
+check_struct_has_member("struct tm" tm_gmtoff time.h HAVE_TM_GMTOFF)
+
 # Libraries that we have a hard dependency on
+if(NOT DEFINED OPENSSL_INCLUDE_DIR OR NOT DEFINED OPENSSL_LIBRARIES)
 find_required_package(OpenSSL)
+endif()
 
 # Mac OS X
 if(APPLE)
 	include_directories(/opt/local/include)
 	link_directories(/opt/local/lib)
-	set(CMAKE_SHARED_LINKER_FLAGS "-mmacosx-version-min=10.4")
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -mmacosx-version-min=10.4")
 endif()
 
 if(NOT WIN32)
@@ -120,11 +122,9 @@ if(NOT WIN32)
 	endif()
 endif()
 
-# Endian
-test_big_endian(BIG_ENDIAN)
-
-# Path to put keymaps
-set(FREERDP_KEYMAP_PATH "${CMAKE_INSTALL_PREFIX}/freerdp/keymaps")
+# Path to put FreeRDP data
+set(FREERDP_DATA_PATH "${CMAKE_INSTALL_PREFIX}/share/freerdp")
+set(FREERDP_KEYMAP_PATH "${FREERDP_DATA_PATH}/keymaps")
 
 # Path to put plugins
 set(FREERDP_PLUGIN_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/freerdp")
@@ -150,16 +150,14 @@ endif()
 # Sub-directories
 add_subdirectory(include)
 add_subdirectory(libfreerdp-utils)
-
-if(NOT WIN32)
-	add_subdirectory(libfreerdp-kbd)
-endif()
-
 add_subdirectory(libfreerdp-gdi)
 add_subdirectory(libfreerdp-rail)
 add_subdirectory(libfreerdp-cache)
 add_subdirectory(libfreerdp-codec)
+add_subdirectory(libfreerdp-crypto)
+add_subdirectory(libfreerdp-sspi)
 add_subdirectory(libfreerdp-channels)
+add_subdirectory(libfreerdp-locale)
 add_subdirectory(libfreerdp-core)
 
 if(NOT WIN32)
@@ -185,3 +183,4 @@ string(TOLOWER ${CMAKE_PROJECT_NAME} CMAKE_PROJECT_NAME_lower)
 set(CPACK_SOURCE_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME_lower}-${FREERDP_VERSION_FULL}")
 
 include(CPack)
+

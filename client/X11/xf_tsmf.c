@@ -196,6 +196,8 @@ static void xf_process_tsmf_video_frame_event(xfInfo* xfi, RDP_VIDEO_FRAME_EVENT
 	uint8* data1;
 	uint8* data2;
 	uint32 pixfmt;
+	uint32 xvpixfmt;
+	boolean converti420yv12 = false;
 	XvImage * image;
 	int colorkey = 0;
 	XShmSegmentInfo shminfo;
@@ -223,10 +225,37 @@ static void xf_process_tsmf_video_frame_event(xfInfo* xfi, RDP_VIDEO_FRAME_EVENT
 				vevent->visible_rects[i].height);
 		}
 	}
+	else
+	{
+		XSetClipRectangles(xfi->display, xfi->gc, vevent->x, vevent->y,
+			(XRectangle*) vevent->visible_rects, vevent->num_visible_rects, YXBanded);
+	}
 
 	pixfmt = vevent->frame_pixfmt;
+
+	if (xf_tsmf_is_format_supported(xv, pixfmt))
+	{
+		xvpixfmt = pixfmt;
+	}
+	else if (pixfmt == RDP_PIXFMT_I420 && xf_tsmf_is_format_supported(xv, RDP_PIXFMT_YV12))
+	{
+		xvpixfmt = RDP_PIXFMT_YV12;
+		converti420yv12 = true;
+	}
+	else if (pixfmt == RDP_PIXFMT_YV12 && xf_tsmf_is_format_supported(xv, RDP_PIXFMT_I420))
+	{
+		xvpixfmt = RDP_PIXFMT_I420;
+		converti420yv12 = true;
+	}
+	else
+	{
+		DEBUG_XV("pixel format 0x%X not supported by hardware.", pixfmt);
+		return;
+	}
+
 	image = XvShmCreateImage(xfi->display, xv->xv_port,
-		pixfmt, 0, vevent->frame_width, vevent->frame_height, &shminfo);
+		xvpixfmt, 0, vevent->frame_width, vevent->frame_height, &shminfo);
+
 	if (xv->xv_image_size != image->data_size)
 	{
 		if (xv->xv_image_size > 0)
@@ -255,12 +284,6 @@ static void xf_process_tsmf_video_frame_event(xfInfo* xfi, RDP_VIDEO_FRAME_EVENT
 	{
 		case RDP_PIXFMT_I420:
 		case RDP_PIXFMT_YV12:
-			if (!xf_tsmf_is_format_supported(xv, RDP_PIXFMT_I420) &&
-				!xf_tsmf_is_format_supported(xv, RDP_PIXFMT_YV12))
-			{
-				DEBUG_XV("pixel format 0x%X not supported by hardware.", pixfmt);
-				break;
-			}
 			/* Y */
 			if (image->pitches[0] == vevent->frame_width)
 			{
@@ -279,7 +302,7 @@ static void xf_process_tsmf_video_frame_event(xfInfo* xfi, RDP_VIDEO_FRAME_EVENT
 			}
 			/* UV */
 			/* Conversion between I420 and YV12 is to simply swap U and V */
-			if (xf_tsmf_is_format_supported(xv, pixfmt))
+			if (converti420yv12 == false)
 			{
 				data1 = vevent->frame_data + vevent->frame_width * vevent->frame_height;
 				data2 = vevent->frame_data + vevent->frame_width * vevent->frame_height +
@@ -324,6 +347,8 @@ static void xf_process_tsmf_video_frame_event(xfInfo* xfi, RDP_VIDEO_FRAME_EVENT
 	XvShmPutImage(xfi->display, xv->xv_port, xfi->window->handle, xfi->gc, image,
 		0, 0, image->width, image->height,
 		vevent->x, vevent->y, vevent->width, vevent->height, false);
+	if (xv->xv_colorkey_atom == None)
+		XSetClipMask(xfi->display, xfi->gc, None);
 	XSync(xfi->display, false);
 
 	XShmDetach(xfi->display, &shminfo);

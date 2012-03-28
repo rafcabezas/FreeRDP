@@ -191,6 +191,36 @@ void xf_Pointer_Set(rdpContext* context, rdpPointer* pointer)
 	if (xfi->window != NULL)
 		XDefineCursor(xfi->display, xfi->window->handle, ((xfPointer*) pointer)->cursor);
 }
+
+void xf_Pointer_SetNull(rdpContext* context)
+{
+	xfInfo* xfi = ((xfContext*) context)->xfi;
+	static Cursor nullcursor = None;
+
+	if (nullcursor == None)
+	{
+		XcursorImage ci;
+		XcursorPixel xp = 0;
+		memset(&ci, 0, sizeof(ci));
+		ci.version = XCURSOR_IMAGE_VERSION;
+		ci.size = sizeof(ci);
+		ci.width = ci.height = 1;
+		ci.xhot = ci.yhot = 0;
+		ci.pixels = &xp;
+		nullcursor = XcursorImageLoadCursor(xfi->display, &ci);
+	}
+	if (xfi->window != NULL && nullcursor != None)
+		XDefineCursor(xfi->display, xfi->window->handle, nullcursor);
+}
+
+void xf_Pointer_SetDefault(rdpContext* context)
+{
+	xfInfo* xfi = ((xfContext*) context)->xfi;
+
+	if (xfi->window != NULL)
+		XUndefineCursor(xfi->display, xfi->window->handle);
+}
+
 /* Glyph Class */
 
 void xf_Glyph_New(rdpContext* context, rdpGlyph* glyph)
@@ -244,12 +274,12 @@ void xf_Glyph_BeginDraw(rdpContext* context, int x, int y, int width, int height
 	xfInfo* xfi = ((xfContext*) context)->xfi;
 
 	bgcolor = (xfi->clrconv->invert)?
-		freerdp_color_convert_var_bgr(bgcolor, xfi->srcBpp, 32, xfi->clrconv):
-		freerdp_color_convert_var_rgb(bgcolor, xfi->srcBpp, 32, xfi->clrconv);
+		freerdp_color_convert_var_bgr(bgcolor, xfi->srcBpp, xfi->bpp, xfi->clrconv):
+		freerdp_color_convert_var_rgb(bgcolor, xfi->srcBpp, xfi->bpp, xfi->clrconv);
 
 	fgcolor = (xfi->clrconv->invert)?
-		freerdp_color_convert_var_bgr(fgcolor, xfi->srcBpp, 32, xfi->clrconv):
-		freerdp_color_convert_var_rgb(fgcolor, xfi->srcBpp, 32, xfi->clrconv);
+		freerdp_color_convert_var_bgr(fgcolor, xfi->srcBpp, xfi->bpp, xfi->clrconv):
+		freerdp_color_convert_var_rgb(fgcolor, xfi->srcBpp, xfi->bpp, xfi->clrconv);
 
 	XSetFunction(xfi->display, xfi->gc, GXcopy);
 	XSetFillStyle(xfi->display, xfi->gc, FillSolid);
@@ -302,6 +332,8 @@ void xf_register_graphics(rdpGraphics* graphics)
 	pointer->New = xf_Pointer_New;
 	pointer->Free = xf_Pointer_Free;
 	pointer->Set = xf_Pointer_Set;
+	pointer->SetNull = xf_Pointer_SetNull;
+	pointer->SetDefault = xf_Pointer_SetDefault;
 
 	graphics_register_pointer(graphics, pointer);
 	xfree(pointer);
