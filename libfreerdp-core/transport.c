@@ -92,8 +92,11 @@ boolean transport_connect_tls(rdpTransport* transport)
 	transport->layer = TRANSPORT_LAYER_TLS;
 	transport->tls->sockfd = transport->tcp->sockfd;
 
-	if (tls_connect(transport->tls) != true)
+	if (tls_connect(transport->tls) != true) {
+		tls_free(transport->tls);
+		transport->tls = NULL;
 		return false;
+	}
 
 	return true;
 }
@@ -109,8 +112,11 @@ boolean transport_connect_nla(rdpTransport* transport)
 	transport->layer = TRANSPORT_LAYER_TLS;
 	transport->tls->sockfd = transport->tcp->sockfd;
 
-	if (tls_connect(transport->tls) != true)
+	if (tls_connect(transport->tls) != true) {
+		tls_free(transport->tls);
+		transport->tls = NULL;
 		return false;
+	}
 
 	/* Network Level Authentication */
 
@@ -125,7 +131,7 @@ boolean transport_connect_nla(rdpTransport* transport)
 
 	if (credssp_authenticate(transport->credssp) < 0)
 	{
-		freerdp_log(transport->instance, "Authentication failure, check credentials.\n"
+		freerdp_log(settings->instance, "Authentication failure, check credentials.\n"
 			"If credentials are valid, the NTLMSSP implementation may be to blame.\n");
         
 		credssp_free(transport->credssp);
@@ -349,7 +355,7 @@ int transport_check_fds(rdpTransport** ptransport)
 
 		if (length == 0)
 		{
-			freerdp_log(transport->instance, "transport_check_fds: protocol error, not a TPKT or Fast Path header.\n");
+			freerdp_log(transport->settings->instance, "transport_check_fds: protocol error, not a TPKT or Fast Path header.\n");
 			freerdp_hexdump(stream_get_head(transport->recv_buffer), pos);
 			return -1;
 		}
@@ -377,10 +383,10 @@ int transport_check_fds(rdpTransport** ptransport)
 		stream_set_pos(received, length);
 		stream_seal(received);
 		stream_set_pos(received, 0);
-		
+
 		if (transport->recv_callback(transport, received, transport->recv_extra) == false)
 			status = -1;
-	
+
 		stream_free(received);
 
 		if (status < 0)
@@ -388,6 +394,16 @@ int transport_check_fds(rdpTransport** ptransport)
 
 		/* transport might now have been freed by rdp_client_redirect and a new rdp->transport created */
 		transport = *ptransport;
+
+		if (transport->process_single_pdu)
+		{
+			/* one at a time but set event if data buffered
+			 * so the main loop will call freerdp_check_fds asap */
+			if (stream_get_pos(transport->recv_buffer) > 0)
+				wait_obj_set(transport->recv_event);
+			break;
+		}
+
 	}
 
 	return 0;
@@ -399,16 +415,15 @@ boolean transport_set_blocking_mode(rdpTransport* transport, boolean blocking)
 	return tcp_set_blocking_mode(transport->tcp, blocking);
 }
 
-rdpTransport* transport_new(freerdp* instance)
+rdpTransport* transport_new(rdpSettings* settings)
 {
-    rdpSettings* settings = instance->settings;
+    freerdp* instance = settings->instance;
 	rdpTransport* transport;
 
 	transport = (rdpTransport*) xzalloc(sizeof(rdpTransport));
 
 	if (transport != NULL)
 	{
-        transport->instance = instance;
 		transport->tcp = tcp_new(instance);
 		transport->settings = settings;
 

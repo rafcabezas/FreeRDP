@@ -56,7 +56,7 @@ struct rdp_transport
 	TransportRecv recv_callback;
 	struct wait_obj* recv_event;
 	boolean blocking;
-    freerdp* instance;
+	boolean process_single_pdu; /* process single pdu in transport_check_fds */
 };
 
 STREAM* transport_recv_stream_init(rdpTransport* transport, int size);
@@ -75,7 +75,7 @@ int transport_write(rdpTransport* transport, STREAM* s);
 void transport_get_fds(rdpTransport* transport, void** rfds, int* rcount);
 int transport_check_fds(rdpTransport** ptransport);
 boolean transport_set_blocking_mode(rdpTransport* transport, boolean blocking);
-rdpTransport* transport_new(freerdp* instance);
+rdpTransport* transport_new(rdpSettings* settings);
 void transport_free(rdpTransport* transport);
 
 #endif

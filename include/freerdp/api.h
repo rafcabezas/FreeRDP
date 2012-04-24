@@ -56,7 +56,8 @@
 #define INLINE	__inline
 #else
 #ifdef OBJC_INLINE
-#define INLINE extern inline
+//#define INLINE extern inline
+#define INLINE inline
 #else
 #define INLINE inline
 #endif
