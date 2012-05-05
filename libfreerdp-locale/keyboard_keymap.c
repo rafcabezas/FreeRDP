@@ -125,7 +125,7 @@ int freerdp_keyboard_load_map(uint32 keycode_to_vkcode[256], char* name)
 				keycode = atoi(keycode_string);
 
 				/* Make sure it is a valid keycode */
-				if (keycode < 0 || keycode > 255)
+				if (keycode > 255)
 					break;
 
 				/* Load this key mapping in the keyboard mapping */
@@ -182,7 +182,7 @@ void freerdp_keyboard_load_maps(uint32 keycode_to_vkcode[256], char* names)
 	char* names_end;
 	int keymap_loaded = 0;
 
-	memset(keycode_to_vkcode, 0, sizeof(keycode_to_vkcode));
+	memset(keycode_to_vkcode, 0, sizeof(uint32)*256);
 
 	kbd = names;
 	names_end = names + strlen(names);

@@ -29,10 +29,12 @@
 #define DEBUG_CLASS(_dbg_class, fmt, ...) DEBUG_PRINT("DBG_" #_dbg_class " %s (%d): ", fmt, ## __VA_ARGS__)
 #define DEBUG_WARN(fmt, ...) DEBUG_PRINT("Warning %s (%d): ", fmt, ## __VA_ARGS__)
 
+#ifndef DEBUG
 #ifdef WITH_DEBUG
 #define DEBUG(fmt, ...)	DEBUG_PRINT("DBG %s (%d): ", fmt, ## __VA_ARGS__)
 #else
 #define DEBUG(fmt, ...) DEBUG_NULL(fmt, ## __VA_ARGS__)
+#endif
 #endif
 
 #endif /* __UTILS_DEBUG_H */

@@ -745,7 +745,7 @@ boolean compress_rdp_5(struct rdp_mppc_enc* enc, uint8* srcData, int len)
 
 		/* encode copy_offset and insert into output buffer */
 
-		if ((copy_offset >= 0) && (copy_offset <= 63))
+		if (copy_offset <= 63)
 		{
 			/* insert binary header */
 			data = 0x1f;
