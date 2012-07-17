@@ -288,7 +288,14 @@ struct rdp_settings
 	ALIGN64 rdpBlob* password_cookie; /* 61 */
 	ALIGN64 char* kerberos_kdc; /* 62 */
 	ALIGN64 char* kerberos_realm; /* 63 */
-	ALIGN64 uint64 paddingC[80 - 64]; /* 64 */
+	ALIGN64 boolean ts_gateway; /* 64 */
+	ALIGN64 char* tsg_hostname; /* 65 */
+	ALIGN64 char* tsg_username; /* 66 */
+	ALIGN64 char* tsg_password; /* 67 */
+	ALIGN64 boolean local; /* 68 */
+	ALIGN64 boolean authentication_only; /* 69 */
+	ALIGN64 boolean from_stdin; /* 70 */
+	ALIGN64 uint64 paddingC[80 - 71]; /* 71 */
 
 	/* User Interface Parameters */
 	ALIGN64 boolean sw_gdi; /* 80 */
@@ -387,7 +394,7 @@ struct rdp_settings
 	ALIGN64 uint32 rfx_codec_id; /* 282 */
 	ALIGN64 uint32 ns_codec_id; /* 283 */
 	ALIGN64 uint32 rfx_codec_mode; /* 284 */
-	ALIGN64 boolean frame_acknowledge; /* 285 */
+	ALIGN64 uint32 frame_acknowledge; /* 285 */
 	ALIGN64 uint64 paddingM[296 - 286]; /* 286 */
 
 	/* Recording */

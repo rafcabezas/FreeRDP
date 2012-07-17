@@ -22,6 +22,8 @@
 
 #include "connection.h"
 
+#include <freerdp/errorcodes.h>
+
 /**
  *                                      Connection Sequence\n
  *     client                                                                    server\n
@@ -69,8 +71,12 @@ boolean rdp_client_connect(rdpRdp* rdp)
 	nego_set_target(rdp->nego, settings->hostname, settings->port);
 	nego_set_cookie(rdp->nego, settings->username);
 	nego_enable_rdp(rdp->nego, settings->rdp_security);
-	nego_enable_nla(rdp->nego, settings->nla_security);
-	nego_enable_tls(rdp->nego, settings->tls_security);
+
+	if (!settings->ts_gateway)
+	{
+		nego_enable_nla(rdp->nego, settings->nla_security);
+		nego_enable_tls(rdp->nego, settings->tls_security);
+	}
 
 	if (nego_connect(rdp->nego) != true)
 	{
@@ -103,6 +109,10 @@ boolean rdp_client_connect(rdpRdp* rdp)
 
 	if (mcs_send_connect_initial(rdp->mcs) != true)
 	{
+		if (!connectErrorCode)
+		{
+			connectErrorCode = MCSCONNECTINITIALERROR;                      
+		}
 		freerdp_log(rdp->instance, "Error: unable to send MCS Connect Initial\n");
 		return false;
 	}
@@ -514,6 +524,7 @@ boolean rdp_client_connect_finalize(rdpRdp* rdp)
 boolean rdp_server_accept_nego(rdpRdp* rdp, STREAM* s)
 {
 	boolean status;
+	rdpSettings* settings = rdp->settings;
 
 	transport_set_blocking_mode(rdp->transport, true);
 
@@ -522,38 +533,35 @@ boolean rdp_server_accept_nego(rdpRdp* rdp, STREAM* s)
 
 	rdp->nego->selected_protocol = 0;
 
-	freerdp_log(rdp->instance, "Requested protocols:");
-	if ((rdp->nego->requested_protocols & PROTOCOL_TLS))
+	freerdp_log(rdp->instance, "Client Security: NLA:%d TLS:%d RDP:%d\n",
+			(rdp->nego->requested_protocols & PROTOCOL_NLA) ? 1 : 0,
+			(rdp->nego->requested_protocols & PROTOCOL_TLS)	? 1 : 0,
+			(rdp->nego->requested_protocols == PROTOCOL_RDP) ? 1: 0);
+
+	freerdp_log(rdp->instance, "Server Security: NLA:%d TLS:%d RDP:%d\n",
+			settings->nla_security, settings->tls_security, settings->rdp_security);
+
+	if ((settings->nla_security) && (rdp->nego->requested_protocols & PROTOCOL_NLA))
 	{
-		freerdp_log(rdp->instance, " TLS");
-		if (rdp->settings->tls_security)
-		{
-			freerdp_log(rdp->instance, "(Y)");
-			rdp->nego->selected_protocol |= PROTOCOL_TLS;
-		}
-		else
-			freerdp_log(rdp->instance, "(n)");
+		rdp->nego->selected_protocol = PROTOCOL_NLA;
 	}
-	if ((rdp->nego->requested_protocols & PROTOCOL_NLA))
+	else if ((settings->tls_security) && (rdp->nego->requested_protocols & PROTOCOL_TLS))
 	{
-		freerdp_log(rdp->instance, " NLA");
-		if (rdp->settings->nla_security)
-		{
-			freerdp_log(rdp->instance, "(Y)");
-			rdp->nego->selected_protocol |= PROTOCOL_NLA;
-		}
-		else
-			freerdp_log(rdp->instance, "(n)");
+		rdp->nego->selected_protocol = PROTOCOL_TLS;
 	}
-	freerdp_log(rdp->instance, " RDP");
-	if (rdp->settings->rdp_security && rdp->nego->selected_protocol == 0)
+	else if ((settings->rdp_security) && (rdp->nego->selected_protocol == PROTOCOL_RDP))
 	{
-		freerdp_log(rdp->instance, "(Y)");
 		rdp->nego->selected_protocol = PROTOCOL_RDP;
 	}
 	else
-		freerdp_log(rdp->instance, "(n)");
-	freerdp_log(rdp->instance, "\n");
+	{
+		freerdp_log(rdp->instance, "Protocol security negotiation failure\n");
+	}
+
+	freerdp_log(rdp->instance, "Negotiated Security: NLA:%d TLS:%d RDP:%d\n",
+			(rdp->nego->selected_protocol & PROTOCOL_NLA) ? 1 : 0,
+			(rdp->nego->selected_protocol & PROTOCOL_TLS)	? 1 : 0,
+			(rdp->nego->selected_protocol == PROTOCOL_RDP) ? 1: 0);
 
 	if (!nego_send_negotiation_response(rdp->nego))
 		return false;

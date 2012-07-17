@@ -37,7 +37,6 @@ set(FREERDP_UTILS_SRCS
 	profiler.c
 	rail.c
 	rect.c
-	registry.c
 	semaphore.c
 	signal.c
 	sleep.c
@@ -48,6 +47,7 @@ set(FREERDP_UTILS_SRCS
 	tcp.c
 	thread.c
 	time.c
+	uds.c
 	unicode.c
 	wait_obj.c)
 

@@ -35,27 +35,6 @@
 
 #include "rdpsnd_main.h"
 
-#define SNDC_CLOSE         1
-#define SNDC_WAVE          2
-#define SNDC_SETVOLUME     3
-#define SNDC_SETPITCH      4
-#define SNDC_WAVECONFIRM   5
-#define SNDC_TRAINING      6
-#define SNDC_FORMATS       7
-#define SNDC_CRYPTKEY      8
-#define SNDC_WAVEENCRYPT   9
-#define SNDC_UDPWAVE       10
-#define SNDC_UDPWAVELAST   11
-#define SNDC_QUALITYMODE   12
-
-#define TSSNDCAPS_ALIVE  1
-#define TSSNDCAPS_VOLUME 2
-#define TSSNDCAPS_PITCH  4
-
-#define DYNAMIC_QUALITY  0x0000
-#define MEDIUM_QUALITY   0x0001
-#define HIGH_QUALITY     0x0002
-
 struct rdpsnd_plugin
 {
 	rdpSvcPlugin plugin;
@@ -107,11 +86,11 @@ static void rdpsnd_process_interval(rdpSvcPlugin* plugin)
 	struct data_out_item* item;
 	uint32 cur_time;
 
-	while (rdpsnd->data_out_list->head)
+	while (list_size(rdpsnd->data_out_list) > 0)
 	{
-		item = (struct data_out_item*)rdpsnd->data_out_list->head->data;
+		item = (struct data_out_item*)list_peek(rdpsnd->data_out_list) ;
 		cur_time = get_mstime();
-		if (cur_time <= item->out_timestamp)
+		if (!item || cur_time <= item->out_timestamp)
 			break;
 
 		item = (struct data_out_item*)list_dequeue(rdpsnd->data_out_list);
@@ -135,7 +114,7 @@ static void rdpsnd_process_interval(rdpSvcPlugin* plugin)
 		}
 	}
 
-	if (rdpsnd->data_out_list->head == NULL && !rdpsnd->is_open)
+	if (list_size(rdpsnd->data_out_list) == 0 && !rdpsnd->is_open)
 	{
 		rdpsnd->plugin.interval_ms = 0;
 	}
@@ -193,8 +172,8 @@ static void rdpsnd_process_message_formats(rdpsndPlugin* rdpsnd, STREAM* data_in
 	stream_write_uint8(data_out, SNDC_FORMATS); /* msgType */
 	stream_write_uint8(data_out, 0); /* bPad */
 	stream_seek_uint16(data_out); /* BodySize */
-	stream_write_uint32(data_out, TSSNDCAPS_ALIVE); /* dwFlags */
-	stream_write_uint32(data_out, 0); /* dwVolume */
+	stream_write_uint32(data_out, TSSNDCAPS_ALIVE | TSSNDCAPS_VOLUME); /* dwFlags */
+	stream_write_uint32(data_out, 0xFFFFFFFF); /* dwVolume */
 	stream_write_uint32(data_out, 0); /* dwPitch */
 	stream_write_uint16_be(data_out, 0); /* wDGramPort */
 	stream_seek_uint16(data_out); /* wNumberOfFormats */

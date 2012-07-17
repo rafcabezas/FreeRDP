@@ -273,7 +273,6 @@ void xf_peer_context_free(freerdp_peer* client, xfPeerContext* context)
 	{
 		stream_free(context->s);
 		rfx_context_free(context->rfx_context);
-		xfree(context);
 	}
 }
 
@@ -633,7 +632,9 @@ void* xf_peer_main_loop(void* arg)
 	settings->cert_file = freerdp_construct_path(server_file_path, "server.crt");
 	settings->privatekey_file = freerdp_construct_path(server_file_path, "server.key");
 
-	settings->nla_security = false;
+	settings->nla_security = true;
+	settings->tls_security = false;
+	settings->rdp_security = false;
 
 	settings->rfx_codec = true;
 

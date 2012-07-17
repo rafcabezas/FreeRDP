@@ -17,13 +17,14 @@
  * limitations under the License.
  */
 
+#include <winpr/sspi.h>
 #include <freerdp/freerdp.h>
+
 #include <freerdp/utils/stream.h>
 #include <freerdp/utils/memory.h>
 #include <freerdp/utils/hexdump.h>
 
 #include "test_sspi.h"
-#include <freerdp/sspi/sspi.h>
 
 #define NTLM_PACKAGE_NAME		"NTLM"
 
@@ -132,7 +133,7 @@ void test_InitializeSecurityContext(void)
 	uint32 fContextReq;
 	void* output_buffer;
 	CtxtHandle context;
-	uint32 pfContextAttr;
+	ULONG pfContextAttr;
 	SECURITY_STATUS status;
 	CredHandle credentials;
 	TimeStamp expiration;
@@ -193,11 +194,11 @@ void test_InitializeSecurityContext(void)
 		return;
 	}
 
-	printf("cBuffers: %d ulVersion: %d\n", output_SecBuffer_desc.cBuffers, output_SecBuffer_desc.ulVersion);
+	printf("cBuffers: %ld ulVersion: %ld\n", output_SecBuffer_desc.cBuffers, output_SecBuffer_desc.ulVersion);
 
 	p_SecBuffer = &output_SecBuffer_desc.pBuffers[0];
 
-	printf("BufferType: 0x%04X cbBuffer:%d\n", p_SecBuffer->BufferType, p_SecBuffer->cbBuffer);
+	printf("BufferType: 0x%04lX cbBuffer:%ld\n", p_SecBuffer->BufferType, p_SecBuffer->cbBuffer);
 
 	freerdp_hexdump((uint8*) p_SecBuffer->pvBuffer, p_SecBuffer->cbBuffer);
 

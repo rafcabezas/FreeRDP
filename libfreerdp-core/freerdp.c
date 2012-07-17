@@ -26,7 +26,10 @@
 #include "extension.h"
 
 #include <freerdp/freerdp.h>
+#include <freerdp/errorcodes.h>
 #include <freerdp/utils/memory.h>
+
+/* connectErrorCode is 'extern' in errorcodes.h. See comment there.*/
 
 /** Creates a new connection based on the settings found in the "instance" parameter
  *  It will use the callbacks registered on the structure to process the pre/post connect operations
@@ -44,19 +47,31 @@ boolean freerdp_connect(freerdp* instance)
 	rdpRdp* rdp;
 	boolean status = false;
 
-	rdp = instance->context->rdp;
+	/* We always set the return code to 0 before we start the connect sequence*/
+	connectErrorCode = 0;
 
-	extension_pre_connect(rdp->extension);
+	rdp = instance->context->rdp;
 
 	IFCALLRET(instance->PreConnect, status, instance);
 
+	rdp->extension = extension_new(instance);
+	extension_pre_connect(rdp->extension);
+
 	if (status != true)
 	{
-		printf("freerdp_pre_connect failed\n");
+		if(!connectErrorCode){
+			connectErrorCode = PREECONNECTERROR;
+		}
+		fprintf(stderr, "%s:%d: freerdp_pre_connect failed\n", __FILE__, __LINE__);
 		return false;
 	}
 
 	status = rdp_client_connect(rdp);
+	// --authonly tests the connection without a UI
+	if (instance->settings->authentication_only) {
+		fprintf(stderr, "%s:%d: Authentication only, exit status %d\n", __FILE__, __LINE__, !status);
+		return status;
+	}
 
 	if (status)
 	{
@@ -74,6 +89,12 @@ boolean freerdp_connect(freerdp* instance)
 		if (status != true)
 		{
 			printf("freerdp_post_connect failed\n");
+			
+			if (!connectErrorCode)
+			{
+				connectErrorCode = POSTCONNECTERROR;
+			}
+			
 			return false;
 		}
 
@@ -85,8 +106,10 @@ boolean freerdp_connect(freerdp* instance)
 
 			s = stream_new(1024);
 			instance->update->pcap_rfx = pcap_open(instance->settings->play_rfx_file, false);
+
 			if (instance->update->pcap_rfx)
 				instance->update->play_rfx = true;
+			
 			update = instance->update;
 
 			while (instance->update->play_rfx && pcap_has_next_record(update->pcap_rfx))
@@ -110,6 +133,11 @@ boolean freerdp_connect(freerdp* instance)
 		}
 	}
 
+	if (!connectErrorCode)
+	{
+		connectErrorCode = UNDEFINEDCONNECTERROR;
+	}
+	
 	return status;
 }
 
@@ -202,6 +230,8 @@ void freerdp_context_new(freerdp* instance)
 	instance->update->altsec->context = instance->context;
 
 	instance->input->context = instance->context;
+
+	update_register_client_callbacks(rdp->update);
 
 	IFCALL(instance->ContextNew, instance, instance->context);
 }

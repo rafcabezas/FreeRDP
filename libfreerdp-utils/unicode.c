@@ -98,7 +98,7 @@ char* freerdp_uniconv_in(UNICONV* uniconv, unsigned char* pin, size_t in_len)
 /* Convert str from DEFAULT_CODEPAGE to WINDOWS_CODEPAGE and return buffer like xstrdup.
  * Buffer is 0-terminated but that is not included in the returned length. */
 
-char* freerdp_uniconv_out(UNICONV *uniconv, char *str, size_t *pout_len)
+char* freerdp_uniconv_out(UNICONV* uniconv, const char *str, size_t* pout_len)
 {
 	size_t ibl;
 	size_t obl;
@@ -114,7 +114,7 @@ char* freerdp_uniconv_out(UNICONV *uniconv, char *str, size_t *pout_len)
 
 	ibl = strlen(str);
 	obl = 2 * ibl;
-	pin = str;
+	pin = (char*) str;
 	pout0 = xmalloc(obl + 2);
 	pout = pout0;
 
@@ -191,17 +191,21 @@ void freerdp_uniconv_uppercase(UNICONV *uniconv, char *wstr, int length)
 	unsigned char* p;
 	unsigned int wc, uwc;
 
-	p = (unsigned char*)wstr;
+	p = (unsigned char*) wstr;
+
 	for (i = 0; i < length; i++)
 	{
 		wc = (unsigned int)(*p);
 		wc += (unsigned int)(*(p + 1)) << 8;
+
 		uwc = towupper(wc);
+
 		if (uwc != wc)
 		{
 			*p = uwc & 0xFF;
 			*(p + 1) = (uwc >> 8) & 0xFF;
 		}
+
 		p += 2;
 	}
 }

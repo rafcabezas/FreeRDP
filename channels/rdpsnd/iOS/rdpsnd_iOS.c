@@ -58,6 +58,8 @@ struct iOS_device_data
     void *context;
     IOSSoundFormat soundFormat;
     void *cdvc;
+    
+    FREERDP_DSP_CONTEXT* dsp_context;
 };
 
 static void rdpsnd_ios_play(rdpsndDevicePlugin* device, uint8* data, int size)
@@ -70,32 +72,31 @@ static void rdpsnd_ios_play(rdpsndDevicePlugin* device, uint8* data, int size)
 		return;
     
 	uint8* src;
-	uint8* decoded_data;
-	int decoded_size;
     
-	if (iOS_data->format == 0x11)
+	if (iOS_data->format == 2)
 	{
-		decoded_data = dsp_decode_ima_adpcm(&iOS_data->adpcm,
-                                                 (uint8 *)data, 
-                                                 size, 
-                                                 iOS_data->soundFormat.channels, 
-                                                 iOS_data->block_size, 
-                                                 &decoded_size);
-		size = decoded_size;
-		src = decoded_data;
+		iOS_data->dsp_context->decode_ms_adpcm(iOS_data->dsp_context,
+                                               data, size, iOS_data->soundFormat.channels,
+                                               iOS_data->block_size);
+		size = iOS_data->dsp_context->adpcm_size;
+		src = iOS_data->dsp_context->adpcm_buffer;
+	}
+	else if (iOS_data->format == 0x11)
+	{
+		iOS_data->dsp_context->decode_ima_adpcm(iOS_data->dsp_context,
+                                                data, size, iOS_data->soundFormat.channels,
+                                                iOS_data->block_size);
+		size = iOS_data->dsp_context->adpcm_size;
+		src = iOS_data->dsp_context->adpcm_buffer;
 	}
 	else
 	{
-		decoded_data = NULL;
 		src = data;
 	}
-    
+
 	LLOGLN(10, ("rdpsnd_iOS_play: size %d", size));
     
     iOSSoundPlay(iOS_data->context, (char *)src, size);
-    
-	if (decoded_data)
-		free(decoded_data);
     
     LLOGLN(0, ("rdpsnd_iOS_play: (end)"));
 

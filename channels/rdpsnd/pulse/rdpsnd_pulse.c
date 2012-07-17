@@ -41,7 +41,8 @@ struct rdpsnd_pulse_plugin
 	int format;
 	int block_size;
 	int latency;
-	ADPCM adpcm;
+
+	FREERDP_DSP_CONTEXT* dsp_context;
 };
 
 static void rdpsnd_pulse_context_state_callback(pa_context* context, void* userdata)
@@ -211,6 +212,7 @@ static void rdpsnd_pulse_set_format_spec(rdpsndPulsePlugin* pulse, rdpsndFormat*
 			sample_spec.format = PA_SAMPLE_ULAW;
 			break;
 
+		case 2: /* MS ADPCM */
 		case 0x11: /* IMA ADPCM */
 			sample_spec.format = PA_SAMPLE_S16LE;
 			break;
@@ -297,7 +299,7 @@ static void rdpsnd_pulse_open(rdpsndDevicePlugin* device, rdpsndFormat* format, 
 	pa_threaded_mainloop_unlock(pulse->mainloop);
 	if (state == PA_STREAM_READY)
 	{
-		memset(&pulse->adpcm, 0, sizeof(ADPCM));
+		freerdp_dsp_context_reset_adpcm(pulse->dsp_context);
 		DEBUG_SVC("connected");
 	}
 	else
@@ -329,6 +331,7 @@ static void rdpsnd_pulse_free(rdpsndDevicePlugin* device)
 		pulse->mainloop = NULL;
 	}
 	xfree(pulse->device_name);
+	freerdp_dsp_context_free(pulse->dsp_context);
 	xfree(pulse);
 }
 
@@ -362,6 +365,7 @@ static boolean rdpsnd_pulse_format_supported(rdpsndDevicePlugin* device, rdpsndF
 			}
 			break;
 
+		case 2: /* MS ADPCM */
 		case 0x11: /* IMA ADPCM */
 			if ((format->nSamplesPerSec <= PA_RATE_MAX) &&
 				(format->wBitsPerSample == 4) &&
@@ -391,6 +395,28 @@ static void rdpsnd_pulse_set_format(rdpsndDevicePlugin* device, rdpsndFormat* fo
 
 static void rdpsnd_pulse_set_volume(rdpsndDevicePlugin* device, uint32 value)
 {
+	rdpsndPulsePlugin* pulse = (rdpsndPulsePlugin*)device;
+	pa_cvolume cv;
+	pa_volume_t left;
+	pa_volume_t right;
+	pa_operation* operation;
+
+	if (!pulse->context || !pulse->stream)
+		return;
+
+	left = (pa_volume_t) (value & 0xFFFF);
+	right = (pa_volume_t) ((value >> 16) & 0xFFFF);
+
+	pa_cvolume_init(&cv);
+	cv.channels = 2;
+	cv.values[0] = PA_VOLUME_MUTED + (left * (PA_VOLUME_NORM - PA_VOLUME_MUTED)) / 0xFFFF;
+	cv.values[1] = PA_VOLUME_MUTED + (right * (PA_VOLUME_NORM - PA_VOLUME_MUTED)) / 0xFFFF;
+
+	pa_threaded_mainloop_lock(pulse->mainloop);
+	operation = pa_context_set_sink_input_volume(pulse->context, pa_stream_get_index(pulse->stream), &cv, NULL, NULL);
+	if(operation)
+		pa_operation_unref(operation);
+	pa_threaded_mainloop_unlock(pulse->mainloop);
 }
 
 static void rdpsnd_pulse_play(rdpsndDevicePlugin* device, uint8* data, int size)
@@ -398,23 +424,27 @@ static void rdpsnd_pulse_play(rdpsndDevicePlugin* device, uint8* data, int size)
 	rdpsndPulsePlugin* pulse = (rdpsndPulsePlugin*)device;
 	int len;
 	int ret;
-	uint8* decoded_data;
 	uint8* src;
-	int decoded_size;
 
 	if (!pulse->stream)
 		return;
 
-	if (pulse->format == 0x11)
+	if (pulse->format == 2)
 	{
-		decoded_data = dsp_decode_ima_adpcm(&pulse->adpcm,
-			data, size, pulse->sample_spec.channels, pulse->block_size, &decoded_size);
-		size = decoded_size;
-		src = decoded_data;
+		pulse->dsp_context->decode_ms_adpcm(pulse->dsp_context,
+			data, size, pulse->sample_spec.channels, pulse->block_size);
+		size = pulse->dsp_context->adpcm_size;
+		src = pulse->dsp_context->adpcm_buffer;
+	}
+	else if (pulse->format == 0x11)
+	{
+		pulse->dsp_context->decode_ima_adpcm(pulse->dsp_context,
+			data, size, pulse->sample_spec.channels, pulse->block_size);
+		size = pulse->dsp_context->adpcm_size;
+		src = pulse->dsp_context->adpcm_buffer;
 	}
 	else
 	{
-		decoded_data = NULL;
 		src = data;
 	}
 
@@ -440,9 +470,6 @@ static void rdpsnd_pulse_play(rdpsndDevicePlugin* device, uint8* data, int size)
 		size -= len;
 	}
 	pa_threaded_mainloop_unlock(pulse->mainloop);
-
-	if (decoded_data)
-		xfree(decoded_data);
 }
 
 static void rdpsnd_pulse_start(rdpsndDevicePlugin* device)
@@ -474,11 +501,13 @@ int FreeRDPRdpsndDeviceEntry(PFREERDP_RDPSND_DEVICE_ENTRY_POINTS pEntryPoints)
 	data = pEntryPoints->plugin_data;
 	if (data && strcmp((char*)data->data[0], "pulse") == 0)
 	{
-		if(strlen((char*)data->data[1]) > 0) 
+		if(data->data[1] && strlen((char*)data->data[1]) > 0) 
 			pulse->device_name = xstrdup((char*)data->data[1]);
 		else
 			pulse->device_name = NULL;
 	}
+
+	pulse->dsp_context = freerdp_dsp_context_new();
 
 	pulse->mainloop = pa_threaded_mainloop_new();
 	if (!pulse->mainloop)

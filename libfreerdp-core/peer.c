@@ -25,6 +25,8 @@
 static boolean freerdp_peer_initialize(freerdp_peer* client)
 {
 	client->context->rdp->settings->server_mode = true;
+	client->context->rdp->settings->frame_acknowledge = 0;
+	client->context->rdp->settings->local = client->local;
 	client->context->rdp->state = CONNECTION_STATE_INITIAL;
 
 	if (client->context->rdp->settings->rdp_key_file != NULL)
@@ -114,11 +116,27 @@ static boolean peer_recv_data_pdu(freerdp_peer* client, STREAM* s)
 					return false;
 			}
 
+			client->activated = true;
+
 			break;
 
 		case DATA_PDU_TYPE_SHUTDOWN_REQUEST:
 			mcs_send_disconnect_provider_ultimatum(client->context->rdp->mcs);
 			return false;
+
+		case DATA_PDU_TYPE_FRAME_ACKNOWLEDGE:
+			stream_read_uint32(s, client->ack_frame_id);
+			break;
+
+		case DATA_PDU_TYPE_REFRESH_RECT:
+			if (!update_read_refresh_rect(client->update, s))
+				return false;
+			break;
+
+		case DATA_PDU_TYPE_SUPPRESS_OUTPUT:
+			if (!update_read_suppress_output(client->update, s))
+				return false;
+			break;
 
 		default:
 			printf("Data PDU type %d\n", type);
@@ -376,6 +394,7 @@ void freerdp_peer_free(freerdp_peer* client)
 	if (client)
 	{
 		rdp_free(client->context->rdp);
+		xfree(client->context);
 		xfree(client);
 	}
 }

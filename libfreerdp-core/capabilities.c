@@ -165,13 +165,6 @@ void rdp_write_general_capability_set(STREAM* s, rdpSettings* settings)
 	if (settings->salted_checksum)
 		extraFlags |= ENC_SALTED_CHECKSUM;
 
-	if (settings->server_mode)
-	{
-		/* not yet supported server-side */
-		settings->refresh_rect = false;
-		settings->suppress_output = false;
-	}
-
 	stream_write_uint16(s, settings->os_major_type); /* osMajorType (2 bytes) */
 	stream_write_uint16(s, settings->os_minor_type); /* osMinorType (2 bytes) */
 	stream_write_uint16(s, CAPS_PROTOCOL_VERSION); /* protocolVersion (2 bytes) */
@@ -1068,7 +1061,7 @@ void rdp_write_virtual_channel_capability_set(STREAM* s, rdpSettings* settings)
 
 	header = rdp_capability_set_start(s);
 
-	flags = (settings->server_mode) ? VCCAPS_COMPR_CS_8K : VCCAPS_NO_COMPR;
+	flags = VCCAPS_NO_COMPR;
 
 	stream_write_uint32(s, flags); /* flags (4 bytes) */
 	stream_write_uint32(s, settings->vc_chunk_size); /* VCChunkSize (4 bytes) */
@@ -1613,7 +1606,14 @@ void rdp_write_bitmap_codecs_capability_set(STREAM* s, rdpSettings* settings)
 
 void rdp_read_frame_acknowledge_capability_set(STREAM* s, uint16 length, rdpSettings* settings)
 {
-	stream_seek_uint32(s); /* (4 bytes) */
+	if (settings->server_mode)
+	{
+		stream_read_uint32(s, settings->frame_acknowledge); /* (4 bytes) */
+	}
+	else
+	{
+		stream_seek_uint32(s); /* (4 bytes) */
+	}
 }
 
 /**
@@ -1628,7 +1628,7 @@ void rdp_write_frame_acknowledge_capability_set(STREAM* s, rdpSettings* settings
 
 	header = rdp_capability_set_start(s);
 
-	stream_write_uint32(s, 2); /* (4 bytes) */
+	stream_write_uint32(s, settings->frame_acknowledge); /* (4 bytes) */
 
 	rdp_capability_set_finish(s, header, CAPSET_TYPE_FRAME_ACKNOWLEDGE);
 }
@@ -1873,7 +1873,7 @@ void rdp_write_demand_active(STREAM* s, rdpSettings* settings)
 	stream_seek_uint16(s); /* numberCapabilities (2 bytes) */
 	stream_write_uint16(s, 0); /* pad2Octets (2 bytes) */
 
-	numberCapabilities = 13;
+	numberCapabilities = 14;
 	rdp_write_general_capability_set(s, settings);
 	rdp_write_bitmap_capability_set(s, settings);
 	rdp_write_order_capability_set(s, settings);
@@ -1887,6 +1887,7 @@ void rdp_write_demand_active(STREAM* s, rdpSettings* settings)
 	rdp_write_desktop_composition_capability_set(s, settings);
 	rdp_write_surface_commands_capability_set(s, settings);
 	rdp_write_bitmap_codecs_capability_set(s, settings);
+	rdp_write_frame_acknowledge_capability_set(s, settings);
 
 	if (settings->persistent_bitmap_cache)
 	{
@@ -2068,7 +2069,7 @@ void rdp_write_confirm_active(STREAM* s, rdpSettings* settings)
 
 	if (settings->received_caps[CAPSET_TYPE_FRAME_ACKNOWLEDGE])
 	{
-		if (settings->frame_acknowledge)
+		if (settings->frame_acknowledge > 0)
 		{
 			numberCapabilities++;
 			rdp_write_frame_acknowledge_capability_set(s, settings);

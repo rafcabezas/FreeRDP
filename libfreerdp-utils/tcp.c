@@ -46,7 +46,7 @@
 
 #else /* ifdef _WIN32 */
 
-#include <freerdp/utils/windows.h>
+#include <winpr/windows.h>
 #define SHUT_RDWR SD_BOTH
 #define close(_fd) closesocket(_fd)
 #endif
@@ -98,6 +98,7 @@ int freerdp_tcp_connect(freerdp* instance, const char* hostname, int port)
 		close(sockfd);
 		sockfd = -1;
 	}
+
 	freeaddrinfo(res);
     
     if (myErrno == ETIMEDOUT)

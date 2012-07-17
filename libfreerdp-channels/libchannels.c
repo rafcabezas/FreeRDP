@@ -287,6 +287,12 @@ static uint32 FREERDP_CC MyVirtualChannelInit(void** ppInitHandle, PCHANNEL_DEF 
 	PCHANNEL_DEF lchannel_def;
 	struct channel_data* lchannel_data;
 
+	if (ppInitHandle == NULL)
+	{
+		DEBUG_CHANNELS("error bad pphan");
+		return CHANNEL_RC_BAD_INIT_HANDLE;
+	}
+
 	channels = g_init_channels;
 	channels->init_handles[channels->num_init_handles].channels = channels;
 	*ppInitHandle = &channels->init_handles[channels->num_init_handles];
@@ -298,12 +304,6 @@ static uint32 FREERDP_CC MyVirtualChannelInit(void** ppInitHandle, PCHANNEL_DEF 
 	{
 		DEBUG_CHANNELS("error not in entry");
 		return CHANNEL_RC_NOT_IN_VIRTUALCHANNELENTRY;
-	}
-
-	if (ppInitHandle == 0)
-	{
-		DEBUG_CHANNELS("error bad pphan");
-		return CHANNEL_RC_BAD_INIT_HANDLE;
 	}
 
 	if (channels->num_channels_data + channelCount >= CHANNEL_MAX_COUNT)
@@ -906,11 +906,14 @@ static void freerdp_channels_process_sync(rdpChannels* channels, freerdp* instan
 	rdpChannel* lrdp_channel;
 	struct channel_data* lchannel_data;
 
-	while (channels->sync_data_list->head != NULL)
+	while (list_size(channels->sync_data_list) > 0)
 	{
 		freerdp_mutex_lock(channels->sync_data_mutex);
 		item = (struct sync_data*)list_dequeue(channels->sync_data_list);
 		freerdp_mutex_unlock(channels->sync_data_mutex);
+
+		if (!item)
+			break ;
 
 		lchannel_data = channels->channels_data + item->index;
 		lrdp_channel = freerdp_channels_find_channel_by_name(channels, instance->settings,

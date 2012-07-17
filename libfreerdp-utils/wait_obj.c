@@ -21,9 +21,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <winpr/windows.h>
 #include <freerdp/utils/memory.h>
 #include <freerdp/utils/wait_obj.h>
-#include <freerdp/utils/windows.h>
 
 #ifndef _WIN32
 #include <sys/time.h>

@@ -25,6 +25,7 @@
 #include <freerdp/utils/stream.h>
 #include <freerdp/utils/memory.h>
 #include <freerdp/utils/hexdump.h>
+#include <freerdp/errorcodes.h>
 
 #include <time.h>
 #include <errno.h>
@@ -39,7 +40,7 @@
 #include "fastpath.h"
 #include "transport.h"
 
-#include <freerdp/sspi/credssp.h>
+#include <freerdp/crypto/nla.h>
 
 #define BUFFER_SIZE 16384
 
@@ -57,11 +58,6 @@ STREAM* transport_send_stream_init(rdpTransport* transport, int size)
 	stream_check_size(s, size);
 	stream_set_pos(s, 0);
 	return s;
-}
-
-boolean transport_connect(rdpTransport* transport, const char* hostname, uint16 port)
-{
-	return tcp_connect(transport->tcp, hostname, port);
 }
 
 void transport_attach(rdpTransport* transport, int sockfd)
@@ -92,7 +88,11 @@ boolean transport_connect_tls(rdpTransport* transport)
 	transport->layer = TRANSPORT_LAYER_TLS;
 	transport->tls->sockfd = transport->tcp->sockfd;
 
-	if (tls_connect(transport->tls) != true) {
+	if (tls_connect(transport->tls) != true)
+	{
+		if (!connectErrorCode)                    
+			connectErrorCode = TLSCONNECTERROR;                      
+
 		tls_free(transport->tls);
 		transport->tls = NULL;
 		return false;
@@ -112,7 +112,11 @@ boolean transport_connect_nla(rdpTransport* transport)
 	transport->layer = TRANSPORT_LAYER_TLS;
 	transport->tls->sockfd = transport->tcp->sockfd;
 
-	if (tls_connect(transport->tls) != true) {
+	if (tls_connect(transport->tls) != true)
+	{
+		if (!connectErrorCode)                    
+			connectErrorCode = TLSCONNECTERROR;                      
+
 		tls_free(transport->tls);
 		transport->tls = NULL;
 		return false;
@@ -131,6 +135,9 @@ boolean transport_connect_nla(rdpTransport* transport)
 
 	if (credssp_authenticate(transport->credssp) < 0)
 	{
+		if (!connectErrorCode)                    
+			connectErrorCode = AUTHENTICATIONERROR;                      
+
 		freerdp_log(settings->instance, "Authentication failure, check credentials.\n"
 			"If credentials are valid, the NTLMSSP implementation may be to blame.\n");
         
@@ -141,6 +148,61 @@ boolean transport_connect_nla(rdpTransport* transport)
 	credssp_free(transport->credssp);
 
 	return true;
+}
+
+boolean transport_tsg_connect(rdpTransport* transport, const char* hostname, uint16 port)
+{
+	rdpTsg* tsg = tsg_new(transport);
+
+	tsg->transport = transport;
+	transport->tsg = tsg;
+
+	if (transport->tls_in == NULL)
+		transport->tls_in = tls_new(transport->settings);
+
+	transport->tls_in->sockfd = transport->tcp_in->sockfd;
+
+	if (transport->tls_out == NULL)
+		transport->tls_out = tls_new(transport->settings);
+
+	transport->tls_out->sockfd = transport->tcp_out->sockfd;
+
+	if (tls_connect(transport->tls_in) != true)
+		return false;
+
+	if (tls_connect(transport->tls_out) != true)
+		return false;
+
+	if (!tsg_connect(tsg, hostname, port))
+		return false;
+
+	return true;
+}
+
+boolean transport_connect(rdpTransport* transport, const char* hostname, uint16 port)
+{
+	boolean status = false;
+	rdpSettings* settings = transport->settings;
+
+	if (transport->settings->ts_gateway)
+	{
+		transport->layer = TRANSPORT_LAYER_TSG;
+		transport->tcp_out = tcp_new(settings->instance);
+
+		status = tcp_connect(transport->tcp_in, settings->tsg_hostname, 443);
+
+		if (status)
+			status = tcp_connect(transport->tcp_out, settings->tsg_hostname, 443);
+
+		if (status)
+			status = transport_tsg_connect(transport, hostname, port);
+	}
+	else
+	{
+		status = tcp_connect(transport->tcp, hostname, port);
+	}
+
+	return status;
 }
 
 boolean transport_accept_rdp(rdpTransport* transport)
@@ -211,6 +273,8 @@ int transport_read(rdpTransport* transport, STREAM* s)
 			status = tls_read(transport->tls, stream_get_tail(s), stream_get_left(s));
 		else if (transport->layer == TRANSPORT_LAYER_TCP)
 			status = tcp_read(transport->tcp, stream_get_tail(s), stream_get_left(s));
+		else if (transport->layer == TRANSPORT_LAYER_TSG)
+			status = tsg_read(transport->tsg, stream_get_tail(s), stream_get_left(s));
 
 		if (status == 0 && transport->blocking)
 		{
@@ -269,6 +333,8 @@ int transport_write(rdpTransport* transport, STREAM* s)
 			status = tls_write(transport->tls, stream_get_tail(s), length);
 		else if (transport->layer == TRANSPORT_LAYER_TCP)
 			status = tcp_write(transport->tcp, stream_get_tail(s), length);
+		else if (transport->layer == TRANSPORT_LAYER_TSG)
+			status = tsg_write(transport->tsg, stream_get_tail(s), length);
 
 		if (status < 0)
 			break; /* error occurred */
@@ -425,6 +491,8 @@ rdpTransport* transport_new(rdpSettings* settings)
 	if (transport != NULL)
 	{
 		transport->tcp = tcp_new(instance);
+		transport->tcp_in = tcp_new(instance);
+
 		transport->settings = settings;
 
 		/* a small 0.1ms delay when transport is blocking. */
@@ -454,9 +522,14 @@ void transport_free(rdpTransport* transport)
 		stream_free(transport->recv_stream);
 		stream_free(transport->send_stream);
 		wait_obj_free(transport->recv_event);
+
 		if (transport->tls)
 			tls_free(transport->tls);
+
 		tcp_free(transport->tcp);
+		tcp_free(transport->tcp_in);
+		tsg_free(transport->tsg);
+
 		xfree(transport);
 	}
 }

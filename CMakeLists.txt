@@ -4,6 +4,7 @@
 # Copyright 2011 O.S. Systems Software Ltda.
 # Copyright 2011 Otavio Salvador <otavio@ossystems.com.br>
 # Copyright 2011 Marc-Andre Moreau <marcandre.moreau@gmail.com>
+# Copyright 2012 HP Development Company, LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -79,6 +80,7 @@ if(MSVC)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /O2 /Ob2")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_X86_")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_UNICODE")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DWINPR_EXPORTS")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DFREERDP_EXPORTS")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DWIN32_LEAN_AND_MEAN")
@@ -116,6 +118,8 @@ if(NOT WIN32)
 
 	if(NOT APPLE)
 		find_suggested_package(FFmpeg)
+		find_suggested_package(XRandR)
+		find_suggested_package(Gstreamer)
 		find_suggested_package(ALSA)
 	else(NOT APPLE)
 		find_optional_package(FFmpeg)
@@ -128,6 +132,9 @@ set(FREERDP_KEYMAP_PATH "${FREERDP_DATA_PATH}/keymaps")
 
 # Path to put plugins
 set(FREERDP_PLUGIN_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/freerdp")
+
+# Path to put extensions
+set(FREERDP_EXTENSION_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/freerdp/extensions")
 
 # Include directories
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -150,12 +157,14 @@ endif()
 # Sub-directories
 add_subdirectory(include)
 add_subdirectory(libfreerdp-utils)
+
+add_subdirectory(winpr)
+
 add_subdirectory(libfreerdp-gdi)
 add_subdirectory(libfreerdp-rail)
 add_subdirectory(libfreerdp-cache)
 add_subdirectory(libfreerdp-codec)
 add_subdirectory(libfreerdp-crypto)
-add_subdirectory(libfreerdp-sspi)
 add_subdirectory(libfreerdp-channels)
 add_subdirectory(libfreerdp-locale)
 add_subdirectory(libfreerdp-core)

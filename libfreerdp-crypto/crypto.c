@@ -69,7 +69,8 @@ void crypto_rc4(CryptoRc4 rc4, uint32 length, const uint8* in_data, uint8* out_d
 
 void crypto_rc4_free(CryptoRc4 rc4)
 {
-	xfree(rc4);
+	if (rc4)
+		xfree(rc4);
 }
 
 CryptoDes3 crypto_des3_encrypt_init(const uint8* key, const uint8* ivec)
@@ -398,8 +399,8 @@ char** crypto_cert_subject_alt_name(X509* xcert, int* count, int** lengths)
 		return NULL;
 
 	num_subject_alt_names = sk_GENERAL_NAME_num(subject_alt_names);
-	strings = (char**) malloc(sizeof(char*) * num_subject_alt_names);
-	*lengths = (int*) malloc(sizeof(int*) * num_subject_alt_names);
+	strings = (char**) xmalloc(sizeof(char*) * num_subject_alt_names);
+	*lengths = (int*) xmalloc(sizeof(int*) * num_subject_alt_names);
 
 	for (index = 0; index < num_subject_alt_names; ++index)
 	{
@@ -415,7 +416,12 @@ char** crypto_cert_subject_alt_name(X509* xcert, int* count, int** lengths)
 	}
 
 	if (*count < 1)
+	{
+		xfree(strings) ;
+		xfree(*lengths) ;
+		*lengths = NULL ;
 		return NULL;
+	}
 
 	return strings;
 }
@@ -511,3 +517,46 @@ void crypto_cert_print_info(X509* xcert)
 	xfree(fp);
 }
 
+char* crypto_base64_encode(uint8* data, int length)
+{
+	BIO* bmem;
+	BIO* b64;
+	BUF_MEM *bptr;
+	char* base64_string;
+
+	b64 = BIO_new(BIO_f_base64());
+	BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
+	bmem = BIO_new(BIO_s_mem());
+	b64 = BIO_push(b64, bmem);
+	BIO_write(b64, data, length);
+
+	if (BIO_flush(b64) < 1)
+		return NULL;
+
+	BIO_get_mem_ptr(b64, &bptr);
+
+	base64_string = xmalloc(bptr->length);
+	memcpy(base64_string, bptr->data, bptr->length - 1);
+	base64_string[bptr->length - 1] = '\0';
+
+	BIO_free_all(b64);
+
+	return base64_string;
+}
+
+void crypto_base64_decode(uint8* enc_data, int length, uint8** dec_data, int* res_length)
+{
+      BIO *b64, *bmem;
+
+      *dec_data = xmalloc(length);
+      memset(*dec_data, 0, length);
+
+      b64 = BIO_new(BIO_f_base64());
+      BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
+      bmem = BIO_new_mem_buf(enc_data, length);
+      bmem = BIO_push(b64, bmem);
+
+      *res_length = BIO_read(bmem, *dec_data, length);
+
+      BIO_free_all(bmem);
+}

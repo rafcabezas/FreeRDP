@@ -35,8 +35,8 @@
 #endif
 
 #include "freerdp_config.h"
+#include <winpr/windows.h>
 #include <freerdp/utils/file.h>
-#include <freerdp/utils/windows.h>
 
 #ifndef _WIN32
 #define PATH_SEPARATOR_STR	"/"
