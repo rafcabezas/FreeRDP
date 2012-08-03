@@ -108,15 +108,24 @@ endif()
 
 # Mac OS X
 if(APPLE)
-	include_directories(/opt/local/include)
-	link_directories(/opt/local/lib)
-	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -mmacosx-version-min=10.4")
-	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -framework CoreFoundation")
+	if(IS_DIRECTORY /opt/local/include)
+		include_directories(/opt/local/include)
+		link_directories(/opt/local/lib)
+	endif()
+	
+	option(WITH_CLANG "Build using clang" OFF)
+	if(WITH_CLANG)
+		set(CMAKE_C_COMPILER "clang")
+	endif()
+	
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mmacosx-version-min=10.4")
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl-framework,CoreFoundation")	
 endif()
 
 if(NOT WIN32)
 	find_required_package(ZLIB)
 	find_optional_package(PulseAudio)
+	find_optional_package(MacAudio)
 	find_optional_package(PCSC)
 	find_suggested_package(Cups)
 
@@ -148,8 +157,10 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/freerdp_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/freerdp_config.h)
 
 # Generate pkg-config
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/freerdp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/freerdp.pc @ONLY)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/freerdp.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+if(NOT MSVC)
+	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/freerdp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/freerdp.pc @ONLY)
+	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/freerdp.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+endif()
 
 # Build CUnit
 find_optional_package(CUnit)
@@ -185,7 +196,9 @@ if(WITH_SERVER)
 	add_subdirectory(server)
 endif()
 
-add_subdirectory(keymaps)
+if(NOT MSVC)
+	add_subdirectory(keymaps)
+endif()
 
 # Source package
 set(CPACK_SOURCE_IGNORE_FILES "/\\\\.git/;/\\\\.gitignore;/CMakeCache.txt")
