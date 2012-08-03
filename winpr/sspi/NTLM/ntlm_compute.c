@@ -49,9 +49,9 @@ void ntlm_get_version_info(NTLM_VERSION_INFO* versionInfo)
 
 	GetVersionExA(&osVersionInfo);
 
-	versionInfo->ProductMajorVersion = osVersionInfo.dwMajorVersion;
-	versionInfo->ProductMinorVersion = osVersionInfo.dwMinorVersion;
-	versionInfo->ProductBuild = osVersionInfo.dwBuildNumber;
+	versionInfo->ProductMajorVersion = (UINT8) osVersionInfo.dwMajorVersion;
+	versionInfo->ProductMinorVersion = (UINT8) osVersionInfo.dwMinorVersion;
+	versionInfo->ProductBuild = (UINT16) osVersionInfo.dwBuildNumber;
 	ZeroMemory(versionInfo->Reserved, sizeof(versionInfo->Reserved));
 	versionInfo->NTLMRevisionCurrent = NTLMSSP_REVISION_W2K3;
 }
@@ -233,16 +233,46 @@ void ntlm_fetch_ntlm_v2_hash(NTLM_CONTEXT* context, char* hash)
 
 	if (entry != NULL)
 	{
-		CopyMemory(hash, entry->NtHash, 16);
+#ifdef WITH_DEBUG_NTLM
+		printf("NTLM Hash:\n");
+		winpr_HexDump(entry->NtHash, 16);
+#endif
+
+		NTOWFv2FromHashW(entry->NtHash,
+			(LPWSTR) context->identity.User, context->identity.UserLength * 2,
+			(LPWSTR) context->identity.Domain, context->identity.DomainLength * 2,
+			(BYTE*) hash);
+
+		SamFreeEntry(sam, entry);
+		SamClose(sam);
+
+		return;
+	}
+
+	entry = SamLookupUserW(sam,
+		(LPWSTR) context->identity.User, context->identity.UserLength * 2, NULL, 0);
+
+	if (entry != NULL)
+	{
+#ifdef WITH_DEBUG_NTLM
+		printf("NTLM Hash:\n");
+		winpr_HexDump(entry->NtHash, 16);
+#endif
+
+		NTOWFv2FromHashW(entry->NtHash,
+			(LPWSTR) context->identity.User, context->identity.UserLength * 2,
+			(LPWSTR) context->identity.Domain, context->identity.DomainLength * 2,
+			(BYTE*) hash);
+
+		SamFreeEntry(sam, entry);
+		SamClose(sam);
+
+		return;
 	}
 	else
 	{
 		printf("Error: Could not find user in SAM database\n");
 	}
-
-	SamFreeEntry(sam, entry);
-
-	SamClose(sam);
 }
 
 void ntlm_compute_ntlm_v2_hash(NTLM_CONTEXT* context, char* hash)

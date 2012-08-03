@@ -25,7 +25,11 @@
 #include <winpr/sam.h>
 #include <winpr/print.h>
 
+#ifdef _WIN32
+#define WINPR_SAM_FILE		"C:\\SAM"
+#else
 #define WINPR_SAM_FILE		"/etc/winpr/SAM"
+#endif
 
 WINPR_SAM* SamOpen(BOOL read_only)
 {
@@ -48,13 +52,17 @@ WINPR_SAM* SamOpen(BOOL read_only)
 			if (!sam->fp)
 				sam->fp = fopen(WINPR_SAM_FILE, "w+");
 		}
+
+		if (!(sam->fp))
+			printf("Could not open SAM file!\n");
 	}
 
 	return sam;
 }
 
-void SamLookupStart(WINPR_SAM* sam)
+BOOL SamLookupStart(WINPR_SAM* sam)
 {
+	size_t read_size;
 	long int file_size;
 
 	fseek(sam->fp, 0, SEEK_END);
@@ -62,20 +70,31 @@ void SamLookupStart(WINPR_SAM* sam)
 	fseek(sam->fp, 0, SEEK_SET);
 
 	if (file_size < 1)
-		return;
+		return FALSE;
 
 	sam->buffer = (char*) malloc(file_size + 2);
 
-	if (fread(sam->buffer, file_size, 1, sam->fp) != 1)
+	read_size = fread(sam->buffer, file_size, 1, sam->fp);
+
+	if (!read_size)
+	{
+		if (!ferror(sam->fp))
+			read_size = file_size;
+	}
+
+	if (read_size < 1)
 	{
 		free(sam->buffer);
-		return;
+		sam->buffer = NULL;
+		return FALSE;
 	}
 
 	sam->buffer[file_size] = '\n';
 	sam->buffer[file_size + 1] = '\0';
 
 	sam->line = strtok(sam->buffer, "\n");
+
+	return TRUE;
 }
 
 void SamLookupFinish(WINPR_SAM* sam)
@@ -112,7 +131,7 @@ void HexStrToBin(char* str, BYTE* bin, int length)
 
 WINPR_SAM_ENTRY* SamReadEntry(WINPR_SAM* sam, WINPR_SAM_ENTRY* entry)
 {
-	char* p[5];
+	char* p[7];
 	int LmHashLength;
 	int NtHashLength;
 
@@ -120,13 +139,15 @@ WINPR_SAM_ENTRY* SamReadEntry(WINPR_SAM* sam, WINPR_SAM_ENTRY* entry)
 	p[1] = strchr(p[0], ':') + 1;
 	p[2] = strchr(p[1], ':') + 1;
 	p[3] = strchr(p[2], ':') + 1;
-	p[4] = p[0] + strlen(p[0]);
+	p[4] = strchr(p[3], ':') + 1;
+	p[5] = strchr(p[4], ':') + 1;
+	p[6] = p[0] + strlen(p[0]);
 
 	entry->UserLength = p[1] - p[0] - 1;
 	entry->DomainLength = p[2] - p[1] - 1;
 
 	LmHashLength = p[3] - p[2] - 1;
-	NtHashLength = p[4] - p[3];
+	NtHashLength = p[4] - p[3] - 1;
 
 	entry->User = (LPSTR) malloc(entry->UserLength + 1);
 	memcpy(entry->User, p[0], entry->UserLength);

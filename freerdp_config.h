@@ -39,6 +39,7 @@
 #define OBJC_INLINE
 #endif
 #define STATIC_PLUGINS
+#define GIT_REVISION 12345
 //#define freerdp_log(instance,...) printf(__VA_ARGS__)
 void freerdp_log(void *inst, const char * text, ...);
 

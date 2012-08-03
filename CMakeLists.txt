@@ -44,6 +44,9 @@ set(FREERDP_VERSION_MINOR "0")
 set(FREERDP_VERSION_REVISION "1")
 set(FREERDP_VERSION "${FREERDP_VERSION_MAJOR}.${FREERDP_VERSION_MINOR}")
 set(FREERDP_VERSION_FULL "${FREERDP_VERSION}.${FREERDP_VERSION_REVISION}")
+include(GetGitRevisionDescription)
+git_describe(GIT_REVISION --match "[0-9]*" --abbrev=4 --tags --always)
+message(STATUS "Git Revision ${GIT_REVISION}")
 
 # Default to release build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -108,6 +111,7 @@ if(APPLE)
 	include_directories(/opt/local/include)
 	link_directories(/opt/local/lib)
 	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -mmacosx-version-min=10.4")
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -framework CoreFoundation")
 endif()
 
 if(NOT WIN32)
@@ -169,9 +173,7 @@ add_subdirectory(libfreerdp-channels)
 add_subdirectory(libfreerdp-locale)
 add_subdirectory(libfreerdp-core)
 
-if(NOT WIN32)
-	add_subdirectory(channels)
-endif()
+add_subdirectory(channels)
 
 option(WITH_CLIENT "Build client binaries" ON)
 if(WITH_CLIENT)
