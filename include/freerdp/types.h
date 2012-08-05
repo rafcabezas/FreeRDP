@@ -28,6 +28,7 @@
 #endif
 
 /* Base Types */
+#include "config.h"
 
 #ifdef HAVE_LIMITS_H
 #include <limits.h>
