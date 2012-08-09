@@ -31,6 +31,7 @@
 #ifdef REMOTER_MAC
 #define WITH_SSE2
 #endif
+#define WITH_JPEG
 
 #if 0
 /* Include files */
