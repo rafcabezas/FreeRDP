@@ -39,27 +39,14 @@
 #define __int3264 __int32
 #endif
 
-#ifdef BOOL
-typedef int *PBOOL, *LPBOOL;
-#else
 #define BOOL int
 typedef int *PBOOL, *LPBOOL;
-#endif
-
-#ifdef BYTE
+#define BYTE unsigned char
 typedef unsigned char *PBYTE, *LPBYTE;
-#else
-typedef unsigned char BYTE, *PBYTE, *LPBYTE;
-#endif
-
-typedef BYTE BOOLEAN, *PBOOLEAN;
-
-#ifdef WCHAR
+typedef unsigned char BOOLEAN, *PBOOLEAN;
+#undef WCHAR
+#define WCHAR unsigned short
 typedef unsigned short *PWCHAR;
-#else
-typedef unsigned short WCHAR, *PWCHAR;
-#endif
-
 typedef WCHAR* BSTR;
 typedef char CHAR, *PCHAR;
 typedef unsigned long DWORD, *PDWORD, *LPDWORD;
@@ -227,7 +214,7 @@ typedef struct _SECURITY_ATTRIBUTES
 
 #endif
 
-typedef BYTE byte;
+typedef unsigned char byte;
 typedef double DOUBLE;
 
 typedef void* PCONTEXT_HANDLE;

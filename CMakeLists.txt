@@ -158,7 +158,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 # Configure files
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/freerdp_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/freerdp_config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 # Generate pkg-config
 if(NOT MSVC)
