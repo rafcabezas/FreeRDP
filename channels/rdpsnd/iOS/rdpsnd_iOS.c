@@ -72,7 +72,7 @@ static void rdpsnd_ios_play(rdpsndDevicePlugin* device, uint8* data, int size)
 		return;
     
 	uint8* src;
-    
+
 	if (iOS_data->format == 2)
 	{
 		iOS_data->dsp_context->decode_ms_adpcm(iOS_data->dsp_context,
@@ -155,6 +155,7 @@ static void rdpsnd_ios_set_format(rdpsndDevicePlugin* device, rdpsndFormat* form
             iOS_data->soundFormat.formatID    = kAudioFormatULaw;
 			break;
             
+        case 2: /* MS ADPCM */
 		case 0x11: /* IMA ADPCM */
             iOS_data->soundFormat.formatID    = kAudioFormatLinearPCM;
             wBitsPerSample = 16;
@@ -253,6 +254,7 @@ static boolean rdpsnd_ios_format_supported(rdpsndDevicePlugin* device, rdpsndFor
             }
 			break;
             
+		case 2: /* MS ADPCM */
 		case 0x11: /* IMA ADPCM */
             if (userSelectedAudioMode == RDP_AUDIO_ADAPTIVE_HIGH
                 || userSelectedAudioMode == RDP_AUDIO_ADAPTIVE_LOW) {
@@ -359,6 +361,8 @@ int FreeRDPRdpsndDeviceEntry_iOS(PFREERDP_RDPSND_DEVICE_ENTRY_POINTS pEntryPoint
     //ios->source_channels = 2;
     //ios->actual_channels = 2;
     //ios->bytes_per_channel = 2;
+    
+    ios->dsp_context = freerdp_dsp_context_new();
     
     pEntryPoints->pRegisterRdpsndDevice(pEntryPoints->rdpsnd, (rdpsndDevicePlugin*)ios);
     ios->cdvc = ((RDP_PLUGIN_DATA *)pEntryPoints->plugin_data)[0].data[1];
