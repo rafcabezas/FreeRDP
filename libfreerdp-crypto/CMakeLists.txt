@@ -38,6 +38,7 @@ if(WIN32)
 	target_link_libraries(freerdp-crypto ws2_32)
 else()
 	target_link_libraries(freerdp-crypto ${ZLIB_LIBRARIES})	
+	target_link_libraries(freerdp-crypto winpr-library)
 endif()
 
 target_link_libraries(freerdp-crypto winpr-sspi)
@@ -45,3 +46,4 @@ target_link_libraries(freerdp-crypto freerdp-utils)
 target_link_libraries(freerdp-crypto ${OPENSSL_LIBRARIES})
 
 install(TARGETS freerdp-crypto DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
