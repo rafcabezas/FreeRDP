@@ -51,17 +51,29 @@ set(FREERDP_UTILS_SRCS
 	unicode.c
 	wait_obj.c)
 
-add_library(freerdp-utils ${FREERDP_UTILS_SRCS})
+if(WITH_MONOLITHIC_BUILD)
+	add_library(freerdp-utils OBJECT ${FREERDP_UTILS_SRCS})
+else()
+	add_library(freerdp-utils ${FREERDP_UTILS_SRCS})
+endif()
 
 set_target_properties(freerdp-utils PROPERTIES VERSION ${FREERDP_VERSION_FULL} SOVERSION ${FREERDP_VERSION} PREFIX "lib")
 
-target_link_libraries(freerdp-utils ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
+set(FREERDP_UTILS_LIBS
+	${CMAKE_THREAD_LIBS_INIT}
+	${CMAKE_DL_LIBS})
 
 if(WIN32)
-	target_link_libraries(freerdp-utils ws2_32)
-endif()
-if(${CMAKE_SYSTEM_NAME} MATCHES SunOS)
-	target_link_libraries(freerdp-utils rt)
+	set(FREERDP_UTILS_LIBS ${FREERDP_UTILS_LIBS} ws2_32)
 endif()
 
-install(TARGETS freerdp-utils DESTINATION ${CMAKE_INSTALL_LIBDIR})
+if(${CMAKE_SYSTEM_NAME} MATCHES SunOS)
+	set(FREERDP_UTILS_LIBS ${FREERDP_UTILS_LIBS} rt)
+endif()
+
+if(WITH_MONOLITHIC_BUILD)
+
+else()
+	target_link_libraries(freerdp-utils ${FREERDP_UTILS_LIBS})
+	install(TARGETS freerdp-utils DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()
