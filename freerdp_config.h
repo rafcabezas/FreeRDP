@@ -16,57 +16,17 @@
 #define FREERDP_KEYMAP_PATH "/usr/local/share/freerdp/keymaps"
 
 /* Include files */
-#define HAVE_FCNTL_H
-//#define HAVE_UNISTD_H
-#define HAVE_LIMITS_H
-//#define HAVE_STDINT_H
-#define HAVE_STDBOOL_H
-//#define HAVE_INTTYPES_H
-
-#define HAVE_TM_GMTOFF
+#define FREERDP_HAVE_LIMITS_H
+#define FREERDP_HAVE_STDINT_H
+#define FREERDP_HAVE_STDBOOL_H
+#define FREERDP_HAVE_INTTYPES_H
+#define FREERDP_STATIC_PLUGINS //Remoter
 //end
-
-#define STATIC_PLUGINS
 
 #ifdef REMOTER_MAC
 #define WITH_SSE2
 #endif
 #define WITH_JPEG
-
-#if 0
-/* Include files */
-#define HAVE_SYS_PARAM_H
-#ifndef HAVE_SYS_SOCKET_H
-#define HAVE_SYS_SOCKET_H
-#endif
-#define HAVE_NETDB_H
-#define HAVE_FCNTL_H
-#ifndef HAVE_UNISTD_H
-#define HAVE_UNISTD_H
-#endif
-#define HAVE_LIMITS_H
-#ifndef HAVE_STDINT_H
-#define HAVE_STDINT_H
-#endif
-#define HAVE_STDBOOL_H
-#ifndef HAVE_INTTYPES_H
-#define HAVE_INTTYPES_H
-#endif
-
-/* Endian */
-#undef BIG_ENDIAN
-
-//Remoter:
-#define FREERDP_CONFIG_DIR "/tmp" //"/dev/null/"
-#define FREERDP_KEYMAP_PATH ""
-#define PLUGIN_PATH ""
-#define EXT_PATH    ""
-#define KEYMAP_PATH ""
-#ifndef OBJC_INLINE
-#define OBJC_INLINE
-#endif
-#define STATIC_PLUGINS
-#endif
 
 //#define freerdp_log(instance,...) printf(__VA_ARGS__)
 void freerdp_log(void *inst, const char * text, ...);

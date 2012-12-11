@@ -60,7 +60,7 @@ FREERDP_API int svc_plugin_send_event(rdpSvcPlugin* plugin, RDP_EVENT* event);
 #define DEBUG_SVC(fmt, ...) DEBUG_NULL(fmt, ## __VA_ARGS__)
 #endif
 
-#ifdef WITH_STATIC_PLUGINS
+#ifdef FREERDP_STATIC_PLUGINS
 #define DEFINE_SVC_PLUGIN_ENTRY(_prefix) int _prefix##_entry(PCHANNEL_ENTRY_POINTS pEntryPoints)
 #else
 #define DEFINE_SVC_PLUGIN_ENTRY(_prefix) int VirtualChannelEntry(PCHANNEL_ENTRY_POINTS pEntryPoints)

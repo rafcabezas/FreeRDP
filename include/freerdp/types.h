@@ -21,8 +21,6 @@
 #ifndef FREERDP_TYPES_H
 #define FREERDP_TYPES_H
 
-#include <freerdp/config.h>
-
 #include "freerdp_config.h"
 
 #ifdef _WIN32
@@ -38,6 +36,7 @@
 #endif
 
 #ifdef FREERDP_HAVE_INTTYPES_H
+typedef int boolean;
 
 #include <inttypes.h>
 typedef uint8_t uint8;

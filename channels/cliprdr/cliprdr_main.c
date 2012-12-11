@@ -272,7 +272,7 @@ static void cliprdr_process_terminate(rdpSvcPlugin* plugin)
 	xfree(plugin);
 }
 
-#ifdef STATIC_PLUGINS
+#ifdef FREERDP_STATIC_PLUGINS
 DEFINE_SVC_STATIC_PLUGIN(cliprdr, CliprDr, "cliprdr",
 	CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP |
 	CHANNEL_OPTION_COMPRESS_RDP | CHANNEL_OPTION_SHOW_PROTOCOL)

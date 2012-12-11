@@ -405,6 +405,8 @@ int credssp_server_authenticate(rdpCredssp* credssp)
 		credssp->table = (*pInitSecurityInterface)();
 	}
 #else
+    
+#ifndef FREERDP_STATIC_PLUGINS
 	if (credssp->SspiModule)
 	{
 		HMODULE hSSPI;
@@ -427,6 +429,7 @@ int credssp_server_authenticate(rdpCredssp* credssp)
 		credssp->table = (*pInitSecurityInterface)();
 	}
 	else
+#endif //FREERDP_STATIC_PLUGINS
 	{
 		credssp->table = InitSecurityInterface();
 	}
