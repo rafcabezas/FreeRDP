@@ -26,6 +26,7 @@
 #include <freerdp/utils/memory.h>
 #include <freerdp/utils/thread.h>
 #include <freerdp/utils/svc_plugin.h>
+#include "svc_plugin.h"
 
 #include "rdpdr_constants.h"
 #include "rdpdr_types.h"
@@ -291,7 +292,7 @@ void printer_register(PDEVICE_SERVICE_ENTRY_POINTS pEntryPoints, rdpPrinter* pri
 	freerdp_thread_start(printer_dev->thread, printer_thread_func, printer_dev);
 }
 
-int DeviceServiceEntry(PDEVICE_SERVICE_ENTRY_POINTS pEntryPoints)
+int RdpDrDeviceServiceEntry(PDEVICE_SERVICE_ENTRY_POINTS pEntryPoints)
 {
 	rdpPrinterDriver* driver = NULL;
 	rdpPrinter** printers;
@@ -338,3 +339,15 @@ int DeviceServiceEntry(PDEVICE_SERVICE_ENTRY_POINTS pEntryPoints)
 
 	return 0;
 }
+
+#ifdef FREERDP_STATIC_PLUGINS
+int VirtualChannelEntry_RdpDrPrinter(PDEVICE_SERVICE_ENTRY_POINTS pEntryPoints)
+{
+    return RdpDrDeviceServiceEntry(pEntryPoints);
+}
+#else
+int DeviceServiceEntry(PDEVICE_SERVICE_ENTRY_POINTS pEntryPoints)
+{
+    return RdpDrDeviceServiceEntry(pEntryPoints);
+}
+#endif

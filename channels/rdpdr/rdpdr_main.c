@@ -40,6 +40,8 @@
 #include "irp.h"
 #include "rdpdr_main.h"
 
+#include "svc_plugin.h"
+
 static void rdpdr_process_connect(rdpSvcPlugin* plugin)
 {
 	rdpdrPlugin* rdpdr = (rdpdrPlugin*) plugin;
@@ -312,6 +314,12 @@ static void rdpdr_process_terminate(rdpSvcPlugin* plugin)
 	xfree(plugin);
 }
 
+#ifdef FREERDP_STATIC_PLUGINS
+DEFINE_SVC_STATIC_PLUGIN(rdpdr, RdpDr, "rdpdr",
+                  CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP |
+                  CHANNEL_OPTION_COMPRESS_RDP)
+#else
 DEFINE_SVC_PLUGIN(rdpdr, "rdpdr",
-	CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP |
-	CHANNEL_OPTION_COMPRESS_RDP)
+                  CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP |
+                  CHANNEL_OPTION_COMPRESS_RDP)
+#endif

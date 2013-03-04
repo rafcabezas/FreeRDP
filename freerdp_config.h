@@ -8,6 +8,11 @@
 #define FREERDP_VERSION_REVISION 1
 #define GIT_REVISION "n/a"
 
+#define HAVE_UNISTD_H 1
+#ifdef REMOTER_MAC
+#define WITH_CUPS 1
+#endif
+
 #define EXT_PATH    ""
 
 //original
