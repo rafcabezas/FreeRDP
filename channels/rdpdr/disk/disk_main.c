@@ -642,7 +642,7 @@ static void disk_free(DEVICE* device)
 	xfree(disk);
 }
 
-int DeviceServiceEntry(PDEVICE_SERVICE_ENTRY_POINTS pEntryPoints)
+int RdpDrDisk_DeviceServiceEntry(PDEVICE_SERVICE_ENTRY_POINTS pEntryPoints)
 {
 	DISK_DEVICE* disk;
 	char* name;
@@ -679,3 +679,15 @@ int DeviceServiceEntry(PDEVICE_SERVICE_ENTRY_POINTS pEntryPoints)
 
 	return 0;
 }
+
+#ifdef FREERDP_STATIC_PLUGINS
+int VirtualChannelEntry_RdpDrDisk(PDEVICE_SERVICE_ENTRY_POINTS pEntryPoints)
+{
+    return RdpDrDisk_DeviceServiceEntry(pEntryPoints);
+}
+#else
+int DeviceServiceEntry(PDEVICE_SERVICE_ENTRY_POINTS pEntryPoints)
+{
+    return RdpDrDisk_DeviceServiceEntry(pEntryPoints);
+}
+#endif

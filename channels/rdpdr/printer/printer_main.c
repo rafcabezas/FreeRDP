@@ -292,7 +292,7 @@ void printer_register(PDEVICE_SERVICE_ENTRY_POINTS pEntryPoints, rdpPrinter* pri
 	freerdp_thread_start(printer_dev->thread, printer_thread_func, printer_dev);
 }
 
-int RdpDrDeviceServiceEntry(PDEVICE_SERVICE_ENTRY_POINTS pEntryPoints)
+int RdpDrPrinter_DeviceServiceEntry(PDEVICE_SERVICE_ENTRY_POINTS pEntryPoints)
 {
 	rdpPrinterDriver* driver = NULL;
 	rdpPrinter** printers;
@@ -343,11 +343,11 @@ int RdpDrDeviceServiceEntry(PDEVICE_SERVICE_ENTRY_POINTS pEntryPoints)
 #ifdef FREERDP_STATIC_PLUGINS
 int VirtualChannelEntry_RdpDrPrinter(PDEVICE_SERVICE_ENTRY_POINTS pEntryPoints)
 {
-    return RdpDrDeviceServiceEntry(pEntryPoints);
+    return RdpDrPrinter_DeviceServiceEntry(pEntryPoints);
 }
 #else
 int DeviceServiceEntry(PDEVICE_SERVICE_ENTRY_POINTS pEntryPoints)
 {
-    return RdpDrDeviceServiceEntry(pEntryPoints);
+    return RdpDrPrinter_DeviceServiceEntry(pEntryPoints);
 }
 #endif

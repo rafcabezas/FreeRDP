@@ -9,6 +9,7 @@
 #define GIT_REVISION "n/a"
 
 #define HAVE_UNISTD_H 1
+#define HAVE_FCNTL_H 1
 #ifdef REMOTER_MAC
 #define WITH_CUPS 1
 #endif
