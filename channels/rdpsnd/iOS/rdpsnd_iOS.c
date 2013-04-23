@@ -30,7 +30,7 @@
 
 #define IMPORTING_FROM_C_FILE
 #import "iOSSound.h"
-#import "ConnectionConfig.h"
+#import "ConnectionItem.h"
 
 #define LOG_LEVEL 0
 #define LLOG(_level, _args) \
