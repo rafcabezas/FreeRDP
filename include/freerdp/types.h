@@ -73,7 +73,9 @@ typedef signed long long sint64;
 #ifdef _WIN32
 #define boolean BOOLEAN
 #else
+#ifndef __APPLE__
 typedef int boolean;
+#endif
 #endif
 
 #else
