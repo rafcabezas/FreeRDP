@@ -24,6 +24,8 @@
 
 #include <freerdp/crypto/per.h>
 
+void rdp_client_process_errInfo(void *instance, uint32 errorInfo); //Raf
+
 #ifdef WITH_DEBUG_RDP
 static const char* const DATA_PDU_TYPE_STRINGS[] =
 {
@@ -461,8 +463,10 @@ void rdp_recv_set_error_info_data_pdu(rdpRdp* rdp, STREAM* s)
 {
 	stream_read_uint32(s, rdp->errorInfo); /* errorInfo (4 bytes) */
 
-	if (rdp->errorInfo != ERRINFO_SUCCESS)
+	if (rdp->errorInfo != ERRINFO_SUCCESS) {
 		rdp_print_errinfo(rdp->errorInfo);
+        rdp_client_process_errInfo(rdp->instance, rdp->errorInfo);
+    }
 }
 
 boolean rdp_recv_data_pdu(rdpRdp* rdp, STREAM* s)
