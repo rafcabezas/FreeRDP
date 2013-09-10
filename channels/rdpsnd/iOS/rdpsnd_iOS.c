@@ -200,7 +200,7 @@ static boolean rdpsnd_ios_format_supported(rdpsndDevicePlugin* device, rdpsndFor
 	int wFormatTag;
     
 	iOS_data = (rdpsndiOSPlugin*) device;
-	if (!iOS_data->context)
+	if (!iOS_data->context || !iOS_data->cdvc)
 		return false;
 	wFormatTag = format->wFormatTag;
 	nChannels = format->nChannels;
