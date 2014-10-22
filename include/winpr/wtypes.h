@@ -33,7 +33,7 @@
 #define __int32 int
 #define __int64 long long
 
-#if __x86_64__
+#if __x86_64__ || __LP64__
 #define __int3264 __int64
 #else
 #define __int3264 __int32
@@ -50,7 +50,7 @@ typedef unsigned short *PWCHAR;
 typedef WCHAR* BSTR;
 typedef char CHAR, *PCHAR;
 typedef unsigned long DWORD, *PDWORD, *LPDWORD;
-typedef unsigned int DWORD32;
+typedef unsigned __int32 DWORD32;
 typedef unsigned __int64 DWORD64;
 typedef unsigned __int64 ULONGLONG;
 typedef ULONGLONG DWORDLONG, *PDWORDLONG;
@@ -71,7 +71,7 @@ typedef DWORD HCALL;
 typedef int INT, *LPINT;
 typedef signed char INT8;
 typedef signed short INT16;
-typedef signed int INT32;
+typedef signed __int32 INT32;
 typedef signed __int64 INT64;
 typedef const WCHAR* LMCSTR;
 typedef WCHAR* LMSTR;
@@ -82,7 +82,7 @@ typedef LONG HRESULT;
 typedef __int3264 LONG_PTR;
 typedef unsigned __int3264 ULONG_PTR;
 
-typedef signed int LONG32;
+typedef signed __int32 LONG32;
 typedef signed __int64 LONG64;
 typedef const char* LPCSTR;
 
@@ -97,13 +97,13 @@ typedef UCHAR* STRING;
 typedef unsigned int UINT;
 typedef unsigned char UINT8;
 typedef unsigned short UINT16;
-typedef unsigned int UINT32;
+typedef unsigned __int32 UINT32;
 typedef unsigned __int64 UINT64;
 typedef unsigned long ULONG, *PULONG;
 
 typedef ULONG_PTR DWORD_PTR;
 typedef ULONG_PTR SIZE_T;
-typedef unsigned int ULONG32;
+typedef unsigned __int32 ULONG32;
 typedef unsigned __int64 ULONG64;
 typedef wchar_t UNICODE;
 typedef unsigned short USHORT;
@@ -111,7 +111,7 @@ typedef void VOID, *PVOID, *LPVOID;
 typedef const void *LPCVOID;
 typedef unsigned short WORD, *PWORD, *LPWORD;
 
-#if __x86_64__
+#if __x86_64__ || __LP64__
 typedef __int64 INT_PTR;
 typedef unsigned __int64 UINT_PTR;
 #else
