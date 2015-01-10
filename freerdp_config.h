@@ -10,7 +10,7 @@
 
 #define HAVE_UNISTD_H 1
 #define HAVE_FCNTL_H 1
-#ifdef REMOTER_MAC
+#if IS_TARGET_OSX==1
 #define WITH_CUPS 1
 #endif
 
@@ -29,7 +29,7 @@
 #define FREERDP_STATIC_PLUGINS //Remoter
 //end
 
-#ifdef REMOTER_MAC
+#if IS_TARGET_OSX==1
 #define WITH_SSE2
 #endif
 #define WITH_JPEG
