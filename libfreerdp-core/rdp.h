@@ -20,6 +20,7 @@
 #ifndef __RDP_H
 #define __RDP_H
 
+#ifndef IMPORT_MINIMUM_REQUIRED
 #include "config.h"
 #include "mcs.h"
 #include "tpkt.h"
@@ -37,6 +38,7 @@
 #include "redirection.h"
 #include "capabilities.h"
 #include "channel.h"
+#endif
 
 #include <freerdp/freerdp.h>
 #include <freerdp/settings.h>
