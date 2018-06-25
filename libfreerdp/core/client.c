@@ -224,11 +224,11 @@ UINT freerdp_channels_post_connect(rdpChannels* channels, freerdp* instance)
 	int index;
 	char* name = NULL;
 	char* hostname;
-	int hostnameLength;
+	size_t hostnameLength;
 	CHANNEL_CLIENT_DATA* pChannelClientData;
 	channels->connected = 1;
 	hostname = instance->settings->ServerHostname;
-	hostnameLength = (int) strlen(hostname);
+	hostnameLength = strlen(hostname);
 
 	for (index = 0; index < channels->clientDataCount; index++)
 	{

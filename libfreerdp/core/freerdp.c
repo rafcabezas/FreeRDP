@@ -154,6 +154,7 @@ BOOL freerdp_connect(freerdp* instance)
 		return FALSE;
 
 	/* We always set the return code to 0 before we start the connect sequence*/
+	instance->ConnectionCallbackState = CLIENT_STATE_INITIAL;
 	connectErrorCode = 0;
 	freerdp_set_last_error(instance->context, FREERDP_ERROR_SUCCESS);
 	clearChannelError(instance->context);
@@ -162,6 +163,7 @@ BOOL freerdp_connect(freerdp* instance)
 	settings = instance->settings;
 	instance->context->codecs = codecs_new(instance->context);
 	IFCALLRET(instance->PreConnect, status, instance);
+	instance->ConnectionCallbackState = CLIENT_STATE_PRECONNECT_PASSED;
 
 	if (status)
 		status2 = freerdp_channels_pre_connect(instance->context->channels,
@@ -209,6 +211,7 @@ BOOL freerdp_connect(freerdp* instance)
 		}
 
 		IFCALLRET(instance->PostConnect, status, instance);
+		instance->ConnectionCallbackState = CLIENT_STATE_POSTCONNECT_PASSED;
 
 		if (status)
 			status2 = freerdp_channels_post_connect(instance->context->channels, instance);
@@ -485,6 +488,7 @@ BOOL freerdp_disconnect(freerdp* instance)
 		rc = FALSE;
 
 	IFCALL(instance->PostDisconnect, instance);
+	instance->ConnectionCallbackState = CLIENT_STATE_POSTDISCONNECT_PASSED;
 
 	if (instance->update->pcap_rfx)
 	{

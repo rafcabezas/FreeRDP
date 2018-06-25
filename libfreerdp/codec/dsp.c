@@ -599,7 +599,7 @@ static BOOL freerdp_dsp_encode_ms_adpcm(FREERDP_DSP_CONTEXT* context,
 	BYTE* dst;
 	INT32 sample;
 	UINT32 out_size;
-
+    const size_t step = 8 + (channels > 1) ? 4 : 0;
 	out_size = size / 2;
 
 	if (out_size > context->adpcm_maxlength)
@@ -620,7 +620,7 @@ static BOOL freerdp_dsp_encode_ms_adpcm(FREERDP_DSP_CONTEXT* context,
 	if (context->adpcm.ms.delta[1] < 16)
 		context->adpcm.ms.delta[1] = 16;
 
-	while (size > 0)
+	while (size >= step)
 	{
 		if ((dst - context->adpcm_buffer) % block_size == 0)
 		{

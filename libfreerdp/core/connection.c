@@ -185,6 +185,11 @@ BOOL rdp_client_connect(rdpRdp* rdp)
 	BOOL status;
 	rdpSettings* settings = rdp->settings;
 
+	/* FIPS Mode forces the following and overrides the following(by happening later */
+	/* in the command line processing): */
+	/* 1. Disables NLA Security since NLA in freerdp uses NTLM(no Kerberos support yet) which uses algorithms */
+	/*      not allowed in FIPS for sensitive data. So, we disallow NLA when FIPS is required. */
+	/* 2. Forces the only supported RDP encryption method to be FIPS. */
 	if (rdp->settingsCopy)
 	{
 		freerdp_settings_free(rdp->settingsCopy);
@@ -318,28 +323,39 @@ BOOL rdp_client_connect(rdpRdp* rdp)
 
 BOOL rdp_client_disconnect(rdpRdp* rdp)
 {
-	BOOL status;
+	rdpSettings* settings;
+	rdpContext* context;
 
-	if (rdp->settingsCopy)
-	{
-		freerdp_settings_free(rdp->settingsCopy);
-		rdp->settingsCopy = NULL;
-	}
+	if (!rdp || !rdp->settings || !rdp->context)
+		return FALSE;
 
-	status = nego_disconnect(rdp->nego);
+	settings = rdp->settings;
+	context = rdp->context;
+
+	if (!nego_disconnect(rdp->nego))
+		return FALSE;
 
 	rdp_reset(rdp);
-
 	rdp_client_transition_to_state(rdp, CONNECTION_STATE_INITIAL);
 
-	return status;
+	if (freerdp_channels_disconnect(context->channels, context->instance) != CHANNEL_RC_OK)
+		return FALSE;
+
+	return TRUE;
 }
+
 
 BOOL rdp_client_redirect(rdpRdp* rdp)
 {
 	BOOL status;
-	rdpSettings* settings = rdp->settings;
+    rdpContext* context;
 
+    if (!rdp || !rdp->context || !rdp->context->channels)
+        return FALSE;
+
+    rdpSettings* settings = rdp->settings;
+    context = rdp->context;
+    
 	rdp_client_disconnect(rdp);
 	if (rdp_redirection_apply_settings(rdp) != 0)
 		return FALSE;
@@ -395,6 +411,9 @@ BOOL rdp_client_redirect(rdpRdp* rdp)
     remoterRDPProcessRedirection(settings->instance);
 
     status = rdp_client_connect(rdp);
+    if (status && (context->instance->ConnectionCallbackState == CLIENT_STATE_POSTCONNECT_PASSED))
+        status = (freerdp_channels_post_connect(context->channels, context->instance) == CHANNEL_RC_OK);
+
     return status;
 }
 
@@ -402,14 +421,20 @@ BOOL rdp_client_reconnect(rdpRdp* rdp)
 {
 	BOOL status;
 	rdpContext* context = rdp->context;
-	rdpChannels* channels = context->channels;
+	rdpChannels* channels;
+
+	if (!rdp || !rdp->context || !rdp->context->channels)
+		return FALSE;
+
+	context = rdp->context;
+	channels = context->channels;
 
 	freerdp_channels_disconnect(channels, context->instance);
 	rdp_client_disconnect(rdp);
 
 	status = rdp_client_connect(rdp);
 
-	if (status)
+	if (status && (context->instance->ConnectionCallbackState == CLIENT_STATE_POSTCONNECT_PASSED))
 		status = (freerdp_channels_post_connect(channels, context->instance) == CHANNEL_RC_OK);
 
 	return status;
@@ -605,7 +630,11 @@ BOOL rdp_server_establish_keys(rdpRdp* rdp, wStream* s)
 
 	crypt_client_random = calloc(1, rand_len);
 	if (!crypt_client_random)
+	{
+		free(client_random);
 		goto end;
+	}
+
 	Stream_Read(s, crypt_client_random, rand_len);
 
 	mod = rdp->settings->RdpServerRsaKey->Modulus;
