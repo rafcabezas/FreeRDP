@@ -262,6 +262,10 @@ extern struct kkey g_keys[];
         if (scrollWheelCount % 8 != 0)
             return;
     }
+
+    if (![anEvent respondsToSelector:@selector(scrollingDeltaY)]) {
+        return;
+    }
     
     if ([event scrollingDeltaY] < 0) {
         flags = PTR_FLAGS_WHEEL | PTR_FLAGS_WHEEL_NEGATIVE | 0x0088;
