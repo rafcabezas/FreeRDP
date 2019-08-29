@@ -77,6 +77,8 @@ boolean rts_connect(rdpRpc* rpc)
 	if (http_response->StatusCode != 200)
 	{
 		printf("rts_connect error!\n");
+        freerdp_log(rpc->settings->instance, "Error: RTS Connect Error. Status Code: %d\n", http_response->StatusCode);
+        
 		http_response_print(http_response);
 		http_response_free(http_response) ;
 		return false;
