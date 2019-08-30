@@ -476,6 +476,7 @@ int credssp_server_authenticate(rdpCredssp* credssp)
 
 	if (credssp->SspiModule)
 	{
+#ifdef WITH_NATIVE_SSPI
 		HMODULE hSSPI;
 		INIT_SECURITY_INTERFACE pInitSecurityInterface;
 
@@ -494,6 +495,7 @@ int credssp_server_authenticate(rdpCredssp* credssp)
 #endif
 
 		credssp->table = (*pInitSecurityInterface)();
+#endif
 	}
 #ifndef WITH_NATIVE_SSPI
 	else

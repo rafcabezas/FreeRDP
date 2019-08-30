@@ -203,7 +203,7 @@ int tls_do_handshake(rdpTls* tls, BOOL clientMode)
 
 	if (verify_status < 1)
 	{
-		fprintf(stderr, "%s: certificate not trusted, aborting.\n", __FUNCTION__);
+		freerdp_log(tls->settings->instance, "%s: certificate not trusted, aborting.\n", __FUNCTION__);
 		tls_disconnect(tls);
 		tls_free_certificate(cert);
 		return 0;

@@ -273,14 +273,14 @@ void tcp_get_mac_address(rdpTcp* tcp)
 
 	if (ioctl(tcp->sockfd, SIOCGIFHWADDR, &if_req) != 0)
 	{
-		fprintf(stderr, "failed to obtain MAC address\n");
+		freerdp_log(tcp->instance, "failed to obtain MAC address\n");
 		return;
 	}
 
 	memmove((void*) mac, (void*) &if_req.ifr_ifru.ifru_hwaddr.sa_data[0], 6);
 #endif
 
-	/* fprintf(stderr, "MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
+	/* freerdp_log(tcp->instance, "MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
 		mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]); */
 }
 
@@ -357,7 +357,7 @@ BOOL tcp_connect(rdpTcp* tcp, const char* hostname, int port)
 
 BOOL tcp_disconnect(rdpTcp* tcp)
 {
-	freerdp_tcp_disconnect(tcp->sockfd);
+	freerdp_tcp_disconnect(tcp->instance, tcp->sockfd);
 	tcp->sockfd = -1;
 
 	return TRUE;
@@ -371,7 +371,7 @@ BOOL tcp_set_blocking_mode(rdpTcp* tcp, BOOL blocking)
 
 	if (flags == -1)
 	{
-		fprintf(stderr, "%s: fcntl failed, %s.\n", __FUNCTION__, strerror(errno));
+		freerdp_log(tcp->instance, "%s: fcntl failed, %s.\n", __FUNCTION__, strerror(errno));
 		return FALSE;
 	}
 
@@ -499,7 +499,7 @@ HANDLE tcp_get_event_handle(rdpTcp* tcp)
 #endif
 }
 
-rdpTcp* tcp_new(rdpSettings* settings)
+rdpTcp* tcp_new(freerdp* instance)
 {
 	rdpTcp* tcp;
 
@@ -510,8 +510,9 @@ rdpTcp* tcp_new(rdpSettings* settings)
 	if (!ringbuffer_init(&tcp->xmitBuffer, 0x10000))
 		goto out_free;
 
+        tcp->instance = instance;
 	tcp->sockfd = -1;
-	tcp->settings = settings;
+		tcp->settings = instance->settings;
 
 #ifndef _WIN32
 	tcp->event = CreateFileDescriptorEvent(NULL, FALSE, FALSE, tcp->sockfd);

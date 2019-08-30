@@ -54,7 +54,7 @@
 #define __int32 int
 #define __int64 long long
 
-#if __x86_64__
+#if __x86_64__ || __LP64__
 #define __int3264 __int64
 #else
 #define __int3264 __int32
@@ -75,7 +75,9 @@ typedef BOOL *PBOOL, *LPBOOL;
 #if defined(__LP64__) || defined(__APPLE__)
 typedef int LONG;
 typedef unsigned int DWORD;
+#ifndef __COREFOUNDATION_CFPLUGINCOM__
 typedef unsigned int ULONG;
+#endif
 #else
 typedef long LONG;
 typedef unsigned long DWORD;
@@ -84,11 +86,13 @@ typedef unsigned long ULONG;
 
 typedef unsigned char BYTE, *PBYTE, *LPBYTE;
 typedef BYTE BOOLEAN, *PBOOLEAN;
-typedef unsigned short WCHAR, *PWCHAR;
+#undef WCHAR
+#define WCHAR unsigned short
+typedef unsigned short *PWCHAR;
 typedef WCHAR* BSTR;
 typedef char CHAR, *PCHAR;
 typedef DWORD *PDWORD, *LPDWORD;
-typedef unsigned int DWORD32;
+typedef unsigned __int32 DWORD32;
 typedef unsigned __int64 DWORD64;
 typedef unsigned __int64 ULONGLONG;
 typedef ULONGLONG DWORDLONG, *PDWORDLONG;
@@ -122,7 +126,7 @@ typedef int INT, *LPINT;
 typedef signed char INT8;
 typedef signed short INT16;
 #ifndef XMD_H
-typedef signed int INT32;
+typedef signed __int32 INT32;
 typedef signed __int64 INT64;
 #endif
 typedef const WCHAR* LMCSTR;
@@ -133,7 +137,7 @@ typedef signed __int64 LONGLONG;
 typedef __int3264 LONG_PTR, *PLONG_PTR;
 typedef unsigned __int3264 ULONG_PTR, *PULONG_PTR;
 
-typedef signed int LONG32;
+typedef signed __int32 LONG32;
 
 #ifndef XMD_H
 typedef signed __int64 LONG64;
@@ -150,16 +154,18 @@ typedef unsigned __int64 QWORD;
 typedef unsigned int UINT;
 typedef unsigned char UINT8;
 typedef unsigned short UINT16;
-typedef unsigned int UINT32;
+typedef unsigned __int32 UINT32;
 typedef unsigned __int64 UINT64;
 typedef ULONG *PULONG;
 
+#ifndef __COREFOUNDATION_CFPLUGINCOM__
 typedef ULONG HRESULT;
+#endif
 typedef ULONG SCODE;
 
 typedef ULONG_PTR DWORD_PTR, *PDWORD_PTR;
 typedef ULONG_PTR SIZE_T;
-typedef unsigned int ULONG32;
+typedef unsigned __int32 ULONG32;
 typedef unsigned __int64 ULONG64;
 typedef wchar_t UNICODE;
 typedef unsigned short USHORT;
@@ -168,7 +174,7 @@ typedef void *PVOID, *LPVOID;
 typedef void *PVOID64, *LPVOID64;
 typedef unsigned short WORD, *PWORD, *LPWORD;
 
-#if __x86_64__
+#if __x86_64__ || __LP64__
 typedef __int64 INT_PTR;
 typedef unsigned __int64 UINT_PTR;
 #else
@@ -191,7 +197,9 @@ typedef struct _LUID
 } LUID, *PLUID;
 
 typedef GUID IID;
+#ifndef __COREFOUNDATION_CFPLUGINCOM__
 typedef IID* REFIID;
+#endif
 
 #ifdef UNICODE
 #define _T(x)	L ## x

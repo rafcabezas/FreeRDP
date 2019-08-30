@@ -61,7 +61,7 @@
 
 #define CAPSET_HEADER_LENGTH			4
 
-#define SOURCE_DESCRIPTOR			"FREERDP"
+#define SOURCE_DESCRIPTOR			"MSTSC" //Changing this breaks Aqua Connect
 
 /* Capabilities Protocol Version */
 #define CAPS_PROTOCOL_VERSION			0x0200

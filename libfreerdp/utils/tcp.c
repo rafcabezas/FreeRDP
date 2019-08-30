@@ -67,7 +67,7 @@
 
 #endif
 
-int freerdp_tcp_connect(const char* hostname, int port)
+int freerdp_tcp_connect(freerdp* instance, const char* hostname, int port)
 {
 	int status;
 	int sockfd;
@@ -95,7 +95,7 @@ int freerdp_tcp_connect(const char* hostname, int port)
 	}
 
 	sockfd = -1;
-
+	int myErrno = 0;
 	for (ai = res; ai; ai = ai->ai_next)
 	{
 		sockfd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
@@ -105,16 +105,25 @@ int freerdp_tcp_connect(const char* hostname, int port)
 
 		if (connect(sockfd, ai->ai_addr, ai->ai_addrlen) == 0)
 		{
-			fprintf(stderr, "connected to %s:%s\n", hostname, servname);
+			freerdp_log(instance, "connected to %s:%s\n", hostname, servname);
+			myErrno = 0;
 			break;
 		}
 
+		myErrno = errno;
 		close(sockfd);
 		sockfd = -1;
 	}
 
 	freeaddrinfo(res);
 
+    if (myErrno == ETIMEDOUT)
+        freerdp_log(instance, "Error connecting to %s:%s. Connection Timeout", hostname, servname);
+    else if (myErrno == ECONNREFUSED)
+        freerdp_log(instance, "Error connecting to %s:%s. Connection Refused", hostname, servname);
+    else if (myErrno != 0)
+        freerdp_log(instance, "Error connecting to %s:%s. %s", hostname, servname, strerror(errno));
+    
 	if (sockfd == -1)
 	{
 		fprintf(stderr, "unable to connect to %s:%s\n", hostname, servname);
@@ -124,7 +133,7 @@ int freerdp_tcp_connect(const char* hostname, int port)
 	return sockfd;
 }
 
-int freerdp_tcp_read(int sockfd, BYTE* data, int length)
+int freerdp_tcp_read(freerdp* instance, int sockfd, BYTE* data, int length)
 {
 	int status;
 
@@ -132,6 +141,7 @@ int freerdp_tcp_read(int sockfd, BYTE* data, int length)
 
 	if (status == 0)
 	{
+        freerdp_log(instance, "tcp_read: Connection Closed");
 		return -1; /* peer disconnected */
 	}
 	else if (status < 0)
@@ -149,7 +159,7 @@ int freerdp_tcp_read(int sockfd, BYTE* data, int length)
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return 0;
 
-		perror("recv");
+        freerdp_log(instance, "tcp_read: Connection Closed");
 #endif
 		return -1;
 	}
@@ -157,7 +167,7 @@ int freerdp_tcp_read(int sockfd, BYTE* data, int length)
 	return status;
 }
 
-int freerdp_tcp_write(int sockfd, BYTE* data, int length)
+int freerdp_tcp_write(freerdp* instance, int sockfd, BYTE* data, int length)
 {
 	int status;
 
@@ -177,7 +187,7 @@ int freerdp_tcp_write(int sockfd, BYTE* data, int length)
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			status = 0;
 		else
-			perror("send");
+            freerdp_log(instance, "tcp_write: Connection Closed");
 #endif
 	}
 
@@ -218,7 +228,7 @@ int freerdp_tcp_wait_write(int sockfd)
 	return 0;
 }
 
-int freerdp_tcp_disconnect(int sockfd)
+int freerdp_tcp_disconnect(freerdp* instance, int sockfd)
 {
 	if (sockfd != -1)
 	{

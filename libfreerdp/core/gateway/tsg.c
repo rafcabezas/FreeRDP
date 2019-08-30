@@ -1453,7 +1453,7 @@ BOOL tsg_connect(rdpTsg* tsg, const char* hostname, UINT16 port)
 	rpc->client->SynchronousSend = TRUE;
 	rpc->client->SynchronousReceive = TRUE;
 
-	fprintf(stderr, "TS Gateway Connection Success\n");
+	freerdp_log(rpc->settings->instance, "TS Gateway Connection Success\n");
 
 	return TRUE;
 }

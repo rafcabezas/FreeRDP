@@ -266,7 +266,7 @@ BOOL rdp_client_connect(rdpRdp* rdp)
 			freerdp_set_last_error(rdp->context, FREERDP_ERROR_SECURITY_NEGO_CONNECT_FAILED);
 		}
 
-		fprintf(stderr, "Error: protocol security negotiation or connection failure\n");
+        freerdp_log(rdp->instance, "Error: protocol security negotiation or connection failure\n");
 		return FALSE;
 	}
 
@@ -294,7 +294,7 @@ BOOL rdp_client_connect(rdpRdp* rdp)
 			freerdp_set_last_error(rdp->context, FREERDP_ERROR_MCS_CONNECT_INITIAL_ERROR);
 		}
 
-		fprintf(stderr, "Error: unable to send MCS Connect Initial\n");
+		freerdp_log(rdp->instance, "Error: unable to send MCS Connect Initial\n");
 		return FALSE;
 	}
 
@@ -512,7 +512,7 @@ BOOL rdp_server_establish_keys(rdpRdp* rdp, wStream* s)
 
 	if (!rdp_read_header(rdp, s, &length, &channel_id))
 	{
-		fprintf(stderr, "%s: invalid RDP header\n", __FUNCTION__);
+		freerdp_log(rdp->instance, "%s: invalid RDP header\n", __FUNCTION__);
 		return FALSE;
 	}
 
@@ -524,7 +524,7 @@ BOOL rdp_server_establish_keys(rdpRdp* rdp, wStream* s)
 
 	if ((sec_flags & SEC_EXCHANGE_PKT) == 0)
 	{
-		fprintf(stderr, "%s: missing SEC_EXCHANGE_PKT in security header\n", __FUNCTION__);
+		freerdp_log(rdp->instance, "%s: missing SEC_EXCHANGE_PKT in security header\n", __FUNCTION__);
 		return FALSE;
 	}
 
@@ -544,7 +544,7 @@ BOOL rdp_server_establish_keys(rdpRdp* rdp, wStream* s)
 
 	if (rand_len != key_len + 8)
 	{
-		fprintf(stderr, "%s: invalid encrypted client random length\n", __FUNCTION__);
+		freerdp_log(rdp->instance, "%s: invalid encrypted client random length\n", __FUNCTION__);
 		goto end2;
 	}
 
@@ -622,7 +622,7 @@ BOOL rdp_client_connect_mcs_connect_response(rdpRdp* rdp, wStream* s)
 {
 	if (!mcs_recv_connect_response(rdp->mcs, s))
 	{
-		fprintf(stderr, "rdp_client_connect_mcs_connect_response: mcs_recv_connect_response failed\n");
+		freerdp_log(rdp->instance, "rdp_client_connect_mcs_connect_response: mcs_recv_connect_response failed\n");
 		return FALSE;
 	}
 
@@ -786,7 +786,7 @@ int rdp_client_connect_license(rdpRdp* rdp, wStream* s)
 
 	if (rdp->license->state == LICENSE_STATE_ABORTED)
 	{
-		fprintf(stderr, "license connection sequence aborted.\n");
+		freerdp_log(rdp->instance, "license connection sequence aborted.\n");
 		return -1;
 	}
 
@@ -966,13 +966,13 @@ BOOL rdp_server_accept_nego(rdpRdp* rdp, wStream* s)
 
 	nego->selected_protocol = 0;
 
-	fprintf(stderr, "Client Security: NLA:%d TLS:%d RDP:%d\n",
+	freerdp_log(rdp->instance, "Client Security: NLA:%d TLS:%d RDP:%d\n",
 			(nego->requested_protocols & PROTOCOL_NLA) ? 1 : 0,
 			(nego->requested_protocols & PROTOCOL_TLS) ? 1 : 0,
 			(nego->requested_protocols == PROTOCOL_RDP) ? 1 : 0
 	);
 
-	fprintf(stderr, "Server Security: NLA:%d TLS:%d RDP:%d\n",
+	freerdp_log(rdp->instance, "Server Security: NLA:%d TLS:%d RDP:%d\n",
 			settings->NlaSecurity, settings->TlsSecurity, settings->RdpSecurity);
 
 	if ((settings->NlaSecurity) && (nego->requested_protocols & PROTOCOL_NLA))
@@ -989,10 +989,10 @@ BOOL rdp_server_accept_nego(rdpRdp* rdp, wStream* s)
 	}
 	else
 	{
-		fprintf(stderr, "Protocol security negotiation failure\n");
+		freerdp_log(rdp->instance, "Protocol security negotiation failure\n");
 	}
 
-	fprintf(stderr, "Negotiated Security: NLA:%d TLS:%d RDP:%d\n",
+	freerdp_log(rdp->instance, "Negotiated Security: NLA:%d TLS:%d RDP:%d\n",
 			(nego->selected_protocol & PROTOCOL_NLA) ? 1 : 0,
 			(nego->selected_protocol & PROTOCOL_TLS) ? 1 : 0,
 			(nego->selected_protocol == PROTOCOL_RDP) ? 1: 0
@@ -1028,14 +1028,14 @@ BOOL rdp_server_accept_mcs_connect_initial(rdpRdp* rdp, wStream* s)
 	if (!mcs_recv_connect_initial(mcs, s))
 		return FALSE;
 
-	fprintf(stderr, "Accepted client: %s\n", rdp->settings->ClientHostname);
-	fprintf(stderr, "Accepted channels:");
+	freerdp_log(rdp->instance, "Accepted client: %s\n", rdp->settings->ClientHostname);
+	freerdp_log(rdp->instance, "Accepted channels:");
 
 	for (i = 0; i < mcs->channelCount; i++)
 	{
-		fprintf(stderr, " %s", mcs->channels[i].Name);
+		freerdp_log(rdp->instance, " %s", mcs->channels[i].Name);
 	}
-	fprintf(stderr, "\n");
+	freerdp_log(rdp->instance, "\n");
 
 	if (!mcs_send_connect_response(mcs))
 		return FALSE;

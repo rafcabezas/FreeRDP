@@ -30,6 +30,7 @@
 #include <winpr/synch.h>
 #include <winpr/stream.h>
 #include <winpr/winsock.h>
+#include "freerdp.h"
 
 #include <freerdp/utils/ringbuffer.h>
 #include <openssl/bio.h>
@@ -48,6 +49,7 @@ struct rdp_tcp
 	char ip_address[32];
 	BYTE mac_address[6];
 	rdpSettings* settings;
+    freerdp* instance;
 #ifdef _WIN32
 	WSAEVENT wsa_event;
 #endif
@@ -71,7 +73,7 @@ BOOL tcp_set_keep_alive_mode(rdpTcp* tcp);
 int tcp_attach(rdpTcp* tcp, int sockfd);
 HANDLE tcp_get_event_handle(rdpTcp* tcp);
 
-rdpTcp* tcp_new(rdpSettings* settings);
+rdpTcp* tcp_new(freerdp* instance);
 void tcp_free(rdpTcp* tcp);
 
 #endif /* __TCP_H */

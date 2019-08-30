@@ -342,7 +342,7 @@ BOOL transport_connect_nla(rdpTransport* transport)
 			freerdp_set_last_error(instance->context, FREERDP_ERROR_AUTHENTICATION_FAILED);
 		}
 
-		fprintf(stderr, "Authentication failure, check credentials.\n"
+		freerdp_log(settings->instance, "Authentication failure, check credentials.\n"
 			"If credentials are valid, the NTLMSSP implementation may be to blame.\n");
 
 		transport_set_nla_mode(transport, FALSE);
@@ -452,7 +452,7 @@ BOOL transport_connect(rdpTransport* transport, const char* hostname, UINT16 por
 	{
 		transport->layer = TRANSPORT_LAYER_TSG;
 		transport->SplitInputOutput = TRUE;
-		transport->TcpOut = tcp_new(settings);
+		transport->TcpOut = tcp_new(settings->instance);
 
 		if (!tcp_connect(transport->TcpIn, settings->GatewayHostname, settings->GatewayPort) ||
 				!tcp_set_blocking_mode(transport->TcpIn, FALSE))
@@ -711,7 +711,7 @@ int transport_read_layer(rdpTransport* transport, BYTE* data, int bytes)
 
 		if (status < 0)
 		{
-			if (!BIO_should_retry(transport->frontBio))
+			if ((transport->frontBio == NULL) || !BIO_should_retry(transport->frontBio))
 			{
 				/* something unexpected happened, let's close */
 				transport->layer = TRANSPORT_LAYER_CLOSED;
@@ -887,7 +887,7 @@ int transport_write(rdpTransport* transport, wStream* s)
 #ifdef WITH_DEBUG_TRANSPORT
 	if (length > 0)
 	{
-		fprintf(stderr, "Local > Remote\n");
+		freerdp_log(transport->settings->instance, "Local > Remote\n");
 		winpr_HexDump(Stream_Buffer(s), length);
 	}
 #endif
@@ -1168,7 +1168,7 @@ int transport_check_fds(rdpTransport* transport)
 
 		if (length == 0)
 		{
-			fprintf(stderr, "transport_check_fds: protocol error, not a TPKT or Fast Path header.\n");
+			freerdp_log(transport->settings->instance, "transport_check_fds: protocol error, not a TPKT or Fast Path header.\n");
 			winpr_HexDump(Stream_Buffer(transport->ReceiveBuffer), pos);
 			return -1;
 		}
@@ -1312,6 +1312,7 @@ static void* transport_client_thread(void* arg)
 rdpTransport* transport_new(rdpSettings* settings)
 {
 	rdpTransport* transport;
+    freerdp* instance = settings->instance;
 
 	transport = (rdpTransport *)calloc(1, sizeof(rdpTransport));
 	if (!transport)
@@ -1322,7 +1323,7 @@ rdpTransport* transport_new(rdpSettings* settings)
 	if (!transport->log)
 		goto out_free;
 
-	transport->TcpIn = tcp_new(settings);
+	transport->TcpIn = tcp_new(instance);
 	if (!transport->TcpIn)
 		goto out_free;
 
