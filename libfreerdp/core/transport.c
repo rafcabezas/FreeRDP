@@ -54,6 +54,13 @@
 
 #define TAG FREERDP_TAG("core.transport")
 
+//Remoter-Start
+#undef WLog_ERR
+#define WLog_ERR(TAG,...) freerdp_log(transport->settings->instance,"ERROR",TAG,__VA_ARGS__)
+#undef WLog_INFO
+#define WLog_INFO(TAG,...) freerdp_log(transport->settings->instance,"INFO",TAG,__VA_ARGS__)
+//Remoter-End
+
 #define BUFFER_SIZE 16384
 
 static void* transport_client_thread(void* arg);

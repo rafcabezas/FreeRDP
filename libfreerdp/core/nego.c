@@ -36,6 +36,11 @@
 
 #define TAG FREERDP_TAG("core.nego")
 
+//Remoter-Start
+#undef WLog_DBG
+#define WLog_DBG(TAG,...) freerdp_log(nego->transport->settings->instance,"ERROR",TAG,__VA_ARGS__)
+//Remoter-End
+
 static const char* const NEGO_STATE_STRINGS[] =
 {
 	"NEGO_STATE_INITIAL",
@@ -419,18 +424,21 @@ void nego_attempt_nla(rdpNego* nego)
 
 	if (!nego_transport_connect(nego))
 	{
+        freerdp_log(nego->transport->settings->instance, "ERROR", TAG, "Error: connection failure\n");
 		nego->state = NEGO_STATE_FAIL;
 		return;
 	}
 
 	if (!nego_send_negotiation_request(nego))
 	{
+        freerdp_log(nego->transport->settings->instance, "ERROR", TAG, "Error: NLA Negotiation failure\n");
 		nego->state = NEGO_STATE_FAIL;
 		return;
 	}
 
 	if (!nego_recv_response(nego))
 	{
+        freerdp_log(nego->transport->settings->instance, "ERROR", TAG, "Error: NLA Negotiation failure\n");
 		nego->state = NEGO_STATE_FAIL;
 		return;
 	}
@@ -445,8 +453,10 @@ void nego_attempt_nla(rdpNego* nego)
 			nego->state = NEGO_STATE_TLS;
 		else if (nego->EnabledProtocols[PROTOCOL_RDP])
 			nego->state = NEGO_STATE_RDP;
-		else
+		else {
 			nego->state = NEGO_STATE_FAIL;
+            freerdp_log(nego->transport->settings->instance, "ERROR", TAG, "Error: NLA Negotiation failure\n");
+        }
 	}
 }
 
@@ -509,12 +519,14 @@ void nego_attempt_rdp(rdpNego* nego)
 
 	if (!nego_send_negotiation_request(nego))
 	{
+        freerdp_log(nego->transport->settings->instance, "ERROR", TAG, "Error: RDP Negotiation failure\n");
 		nego->state = NEGO_STATE_FAIL;
 		return;
 	}
 
 	if (!nego_recv_response(nego))
 	{
+        freerdp_log(nego->transport->settings->instance, "ERROR", TAG, "Error: RDP Negotiation failure\n");
 		nego->state = NEGO_STATE_FAIL;
 		return;
 	}

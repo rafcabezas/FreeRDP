@@ -512,6 +512,10 @@ out_error_pubsub:
 	return FALSE;
 }
 
+void setup_pubsub(freerdp* instance) {
+    PubSub_AddEventTypes(instance->context->pubSub, FreeRDP_Events, sizeof(FreeRDP_Events) / sizeof(wEventType));
+}
+
 /** Deallocator function for a rdp context.
  *  The function will deallocate the resources from the 'instance' parameter that were allocated from a call
  *  to freerdp_context_new().

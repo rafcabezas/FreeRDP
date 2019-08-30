@@ -89,7 +89,10 @@ PCSTR inet_ntop(INT Family, PVOID pAddr, PSTR pStringBuf, size_t StringBufSize);
 #define WSAOVERLAPPED	OVERLAPPED
 typedef OVERLAPPED*	LPWSAOVERLAPPED;
 
+#ifndef SOCKET
 typedef UINT_PTR SOCKET;
+#endif
+
 typedef struct sockaddr_storage SOCKADDR_STORAGE;
 
 #ifndef INVALID_SOCKET

@@ -86,6 +86,13 @@
 
 #define TAG FREERDP_TAG("core")
 
+//Remoter-Start
+#undef WLog_ERR
+#define WLog_ERR(TAG,...) freerdp_log(settings->instance,"ERROR",TAG,__VA_ARGS__)
+#undef WLog_INFO
+#define WLog_INFO(TAG,...) freerdp_log(settings->instance,"INFO",TAG,__VA_ARGS__)
+//Remoter-End
+
 /* Simple Socket BIO */
 
 struct _WINPR_BIO_SIMPLE_SOCKET
@@ -490,7 +497,7 @@ static int transport_bio_buffered_write(BIO* bio, const char* buf, int num)
 	 */
 	if (buf && num && !ringbuffer_write(&ptr->xmitBuffer, (const BYTE*) buf, num))
 	{
-		WLog_ERR(TAG, "an error occured when writing (num: %d)", num);
+//		WLog_ERR(TAG, "an error occured when writing (num: %d)", num);
 		return -1;
 	}
 
@@ -693,7 +700,7 @@ char* freerdp_tcp_get_ip_address(int sockfd)
 	return _strdup(ipAddress);
 }
 
-int freerdp_uds_connect(const char* path)
+int freerdp_uds_connect(rdpSettings* settings, const char* path)
 {
 #ifndef _WIN32
 	int status;
@@ -725,7 +732,7 @@ int freerdp_uds_connect(const char* path)
 #endif
 }
 
-BOOL freerdp_tcp_resolve_hostname(const char* hostname)
+BOOL freerdp_tcp_resolve_hostname(rdpSettings* settings, const char* hostname)
 {
 	int status;
 	struct addrinfo hints = { 0 };
@@ -744,7 +751,7 @@ BOOL freerdp_tcp_resolve_hostname(const char* hostname)
 	return TRUE;
 }
 
-BOOL freerdp_tcp_connect_timeout(int sockfd, struct sockaddr* addr, socklen_t addrlen, int timeout)
+BOOL freerdp_tcp_connect_timeout(rdpSettings* settings, int sockfd, struct sockaddr* addr, socklen_t addrlen, int timeout)
 {
 	int status;
 
@@ -1134,7 +1141,7 @@ int freerdp_tcp_connect_multi(char** hostnames, UINT32* ports, int count, int po
 
 #endif
 
-BOOL freerdp_tcp_set_keep_alive_mode(int sockfd)
+BOOL freerdp_tcp_set_keep_alive_mode(rdpSettings* settings, int sockfd)
 {
 #ifndef _WIN32
 	UINT32 optval;
@@ -1217,7 +1224,7 @@ int freerdp_tcp_connect(rdpSettings* settings, const char* hostname, int port, i
 
 	if (ipcSocket)
 	{
-		sockfd = freerdp_uds_connect(hostname);
+		sockfd = freerdp_uds_connect(settings, hostname);
 
 		if (sockfd < 0)
 			return -1;
@@ -1228,7 +1235,7 @@ int freerdp_tcp_connect(rdpSettings* settings, const char* hostname, int port, i
 
 		if (!settings->GatewayEnabled)
 		{
-			if (!freerdp_tcp_resolve_hostname(hostname) || settings->RemoteAssistanceMode)
+			if (!freerdp_tcp_resolve_hostname(settings, hostname) || settings->RemoteAssistanceMode)
 			{
 				if (settings->TargetNetAddressCount > 0)
 				{
@@ -1281,7 +1288,7 @@ int freerdp_tcp_connect(rdpSettings* settings, const char* hostname, int port, i
 				return -1;
 			}
 
-			if (!freerdp_tcp_connect_timeout(sockfd, addr->ai_addr, addr->ai_addrlen, timeout))
+			if (!freerdp_tcp_connect_timeout(settings, sockfd, addr->ai_addr, addr->ai_addrlen, timeout))
 			{
 				fprintf(stderr, "failed to connect to %s\n", hostname);
 				freeaddrinfo(result);
@@ -1324,7 +1331,7 @@ int freerdp_tcp_connect(rdpSettings* settings, const char* hostname, int port, i
 
 	if (!ipcSocket)
 	{
-		if (!freerdp_tcp_set_keep_alive_mode(sockfd))
+		if (!freerdp_tcp_set_keep_alive_mode(settings, sockfd))
 			return -1;
 	}
 

@@ -572,6 +572,14 @@ int rpc_client_default_out_channel_recv(rdpRpc* rpc)
 
 		while (1)
 		{
+            //Remoter-Start
+            // break on disconnect
+            freerdp *instance = (freerdp*) rpc->settings->instance;
+            if (instance && instance->context && instance->context->rdp && instance->context->rdp->disconnect) {
+                break;
+            }
+            //Remoter-End
+            
 			while (Stream_GetPosition(fragment) < RPC_COMMON_FIELDS_LENGTH)
 			{
 				status = rpc_out_channel_read(outChannel, Stream_Pointer(fragment),

@@ -478,6 +478,7 @@ int nla_server_init(rdpNla* nla)
 
 	if (nla->SspiModule)
 	{
+#ifdef WITH_NATIVE_SSPI
 		HMODULE hSSPI;
 		INIT_SECURITY_INTERFACE pInitSecurityInterface;
 
@@ -495,6 +496,7 @@ int nla_server_init(rdpNla* nla)
 		pInitSecurityInterface = (INIT_SECURITY_INTERFACE) GetProcAddress(hSSPI, "InitSecurityInterfaceA");
 #endif
 		nla->table = pInitSecurityInterface();
+#endif
 	}
 	else
 	{

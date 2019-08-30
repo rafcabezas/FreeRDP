@@ -25,6 +25,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if __APPLE__
+#include <sys/time.h>
+#endif
 
 #include <winpr/crt.h>
 #include <winpr/stream.h>
