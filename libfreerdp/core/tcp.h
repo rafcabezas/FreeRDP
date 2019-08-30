@@ -31,6 +31,7 @@
 #include <winpr/synch.h>
 #include <winpr/stream.h>
 #include <winpr/winsock.h>
+#include "freerdp.h"
 
 #include <openssl/bio.h>
 

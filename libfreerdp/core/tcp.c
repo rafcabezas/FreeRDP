@@ -86,6 +86,13 @@
 
 #define TAG FREERDP_TAG("core")
 
+//Remoter-Start
+#undef WLog_ERR
+#define WLog_ERR(TAG,...) freerdp_log(settings->instance,"ERROR",TAG,__VA_ARGS__)
+#undef WLog_INFO
+#define WLog_INFO(TAG,...) freerdp_log(settings->instance,"INFO",TAG,__VA_ARGS__)
+//Remoter-End
+
 /* Simple Socket BIO */
 
 struct _WINPR_BIO_SIMPLE_SOCKET
@@ -369,7 +376,7 @@ static int transport_bio_simple_init(BIO* bio, SOCKET socket, int shutdown)
 	/* WSAEventSelect automatically sets the socket in non-blocking mode */
 	if (WSAEventSelect(ptr->socket, ptr->hEvent, FD_READ | FD_ACCEPT | FD_CLOSE))
 	{
-		WLog_ERR(TAG, "WSAEventSelect returned %08X", WSAGetLastError());
+//		WLog_ERR(TAG, "WSAEventSelect returned %08X", WSAGetLastError());
 		return 0;
 	}
 
@@ -489,7 +496,7 @@ static int transport_bio_buffered_write(BIO* bio, const char* buf, int num)
 	 */
 	if (buf && num && !ringbuffer_write(&ptr->xmitBuffer, (const BYTE*) buf, num))
 	{
-		WLog_ERR(TAG, "an error occured when writing (num: %d)", num);
+//		WLog_ERR(TAG, "an error occured when writing (num: %d)", num);
 		return -1;
 	}
 
@@ -692,7 +699,7 @@ char* freerdp_tcp_get_ip_address(int sockfd)
 	return _strdup(ipAddress);
 }
 
-static int freerdp_uds_connect(const char* path)
+static int freerdp_uds_connect(rdpSettings* settings, const char* path)
 {
 #ifndef _WIN32
 	int status;
@@ -724,7 +731,7 @@ static int freerdp_uds_connect(const char* path)
 #endif
 }
 
-BOOL freerdp_tcp_resolve_hostname(const char* hostname)
+BOOL freerdp_tcp_resolve_hostname(rdpSettings* settings, const char* hostname)
 {
 	int status;
 	struct addrinfo hints = { 0 };
@@ -752,6 +759,7 @@ static BOOL freerdp_tcp_connect_timeout(rdpContext* context, int sockfd,
 	int count = 0;
 	u_long arg = 0;
 	DWORD tout = (timeout) ? timeout * 1000 : INFINITE;
+    rdpSettings *settings = context->settings;
 
 	handles[count] = CreateEvent(NULL, TRUE, FALSE, NULL);
 	if (!handles[count])
@@ -828,6 +836,7 @@ static int freerdp_tcp_connect_multi(rdpContext* context, char** hostnames,
 	struct addrinfo* result;
 	struct addrinfo** addrs;
 	struct addrinfo** results;
+    rdpSettings *settings = context->settings;
 
 	sprintf_s(port_str, sizeof(port_str) - 1, "%u", port);
 
@@ -972,7 +981,7 @@ static int freerdp_tcp_connect_multi(rdpContext* context, char** hostnames,
 	return sockfd;
 }
 
-BOOL freerdp_tcp_set_keep_alive_mode(int sockfd)
+BOOL freerdp_tcp_set_keep_alive_mode(rdpSettings* settings, int sockfd)
 {
 #ifndef _WIN32
 	UINT32 optval;
@@ -1060,7 +1069,7 @@ int freerdp_tcp_connect(rdpContext* context, rdpSettings* settings,
 
 	if (ipcSocket)
 	{
-		sockfd = freerdp_uds_connect(hostname);
+		sockfd = freerdp_uds_connect(settings, hostname);
 
 		if (sockfd < 0)
 			return -1;
@@ -1073,7 +1082,7 @@ int freerdp_tcp_connect(rdpContext* context, rdpSettings* settings,
 
 		if (!settings->GatewayEnabled)
 		{
-			if (!freerdp_tcp_resolve_hostname(hostname) || settings->RemoteAssistanceMode)
+			if (!freerdp_tcp_resolve_hostname(settings, hostname) || settings->RemoteAssistanceMode)
 			{
 				if (settings->TargetNetAddressCount > 0)
 				{
@@ -1183,7 +1192,7 @@ int freerdp_tcp_connect(rdpContext* context, rdpSettings* settings,
 
 	if (!ipcSocket && !useExternalDefinedSocket)
 	{
-		if (!freerdp_tcp_set_keep_alive_mode(sockfd))
+		if (!freerdp_tcp_set_keep_alive_mode(settings, sockfd))
 		{
 			close(sockfd);
 			WLog_ERR(TAG, "Couldn't set keep alive mode.");

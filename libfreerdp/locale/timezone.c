@@ -1515,6 +1515,12 @@ char* freerdp_get_unix_timezone_identifier()
 	char* tzid = NULL;
 	char buf[1024];
 
+    char *tz = _strdup(freerdp_timezone());
+    if (tz != NULL)
+    {
+        return tz;
+    }
+
 	tz_env = getenv("TZ");
 
 	if (tz_env != NULL)

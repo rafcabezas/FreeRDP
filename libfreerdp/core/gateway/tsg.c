@@ -38,6 +38,13 @@
 
 #define TAG FREERDP_TAG("core.gateway.tsg")
 
+//Remoter-Start
+#undef WLog_ERR
+#define WLog_ERR(TAG,...) freerdp_log(tsg->settings->instance,"ERROR",TAG,__VA_ARGS__)
+#undef WLog_INFO
+#define WLog_INFO(TAG,...) freerdp_log(tsg->settings->instance,"INFO",TAG,__VA_ARGS__)
+//Remoter-End
+
 /**
  * RPC Functions: http://msdn.microsoft.com/en-us/library/windows/desktop/aa378623/
  * Remote Procedure Call: http://msdn.microsoft.com/en-us/library/windows/desktop/aa378651/

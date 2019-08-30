@@ -17,4 +17,4 @@
  * limitations under the License.
  */
 
-
+#define CMAKE_SHARED_LIBRARY_PREFIX ""

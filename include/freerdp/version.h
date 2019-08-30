@@ -1,8 +1,9 @@
 /**
  * FreeRDP: A Remote Desktop Protocol Implementation
- * RPC Secure Context Binding
+ * Version includes
  *
- * Copyright 2012 Marc-Andre Moreau <marcandre.moreau@gmail.com>
+ * Copyright 2013 Thincast Technologies GmbH
+ * Copyright 2013 Bernhard Miklautz <bernhard.miklautz@thincast.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +17,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef _FREERDP_VERSION_H_
+#define _FREERDP_VERSION_H_
 
-#ifndef FREERDP_CORE_RPC_BIND_H
-#define FREERDP_CORE_RPC_BIND_H
+#define FREERDP_VERSION_MAJOR 1
+#define FREERDP_VERSION_MINOR 2
+#define FREERDP_VERSION_REVISION 0
+#define FREERDP_VERSION_SUFFIX "${FREERDP_VERSION_SUFFIX}"
+#define FREERDP_API_VERSION "${FREERDP_API_VERSION}"
+#define FREERDP_VERSION "${FREERDP_VERSION}"
+#define FREERDP_VERSION_FULL "${FREERDP_VERSION_FULL}"
+#define GIT_REVISION "72f38ce75a86095b831a01cd3606ec77b81dd444"
 
-#include "rpc.h"
-
-#include <winpr/wtypes.h>
-
-extern const p_uuid_t TSGU_UUID;
-#define TSGU_SYNTAX_IF_VERSION	0x00030001
-
-extern const p_uuid_t NDR_UUID;
-#define NDR_SYNTAX_IF_VERSION	0x00000002
-
-extern const p_uuid_t BTFN_UUID;
-#define BTFN_SYNTAX_IF_VERSION	0x00000001
-
-int rpc_send_bind_pdu(rdpRpc* rpc);
-int rpc_recv_bind_ack_pdu(rdpRpc* rpc, BYTE* buffer, UINT32 length);
-int rpc_send_rpc_auth_3_pdu(rdpRpc* rpc);
-
-#endif /* FREERDP_CORE_RPC_BIND_H */
+#endif // _FREERDP_VERSION_H_

@@ -17,8 +17,8 @@
  * limitations under the License.
  */
 
+#include <stdio.h>
 #include <string.h>
-#include <malloc.h>
 
 #include <winpr/crt.h>
 #include <winpr/windows.h>
