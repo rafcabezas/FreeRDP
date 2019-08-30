@@ -31,7 +31,6 @@
 
 #include <freerdp/addin.h>
 
-
 LPSTR freerdp_get_library_install_path()
 {
 	LPSTR pszPath;

@@ -37,6 +37,13 @@
 
 #define TAG FREERDP_TAG("core.gateway.tsg")
 
+//Remoter-Start
+#undef WLog_ERR
+#define WLog_ERR(TAG,...) freerdp_log(instance,"ERROR",TAG,__VA_ARGS__)
+#undef WLog_INFO
+#define WLog_INFO(TAG,...) freerdp_log(instance,"INFO",TAG,__VA_ARGS__)
+//Remoter-End
+
 /**
  * RPC Functions: http://msdn.microsoft.com/en-us/library/windows/desktop/aa378623/
  * Remote Procedure Call: http://msdn.microsoft.com/en-us/library/windows/desktop/aa378651/
@@ -70,6 +77,7 @@ DWORD TsProxySendToServer(handle_t IDL_handle, byte pRpcMessage[], UINT32 count,
 	UINT32 totalDataBytes = 0;
 	tsg = (rdpTsg*) IDL_handle;
 	buffer1Length = buffer2Length = buffer3Length = 0;
+    freerdp *instance = tsg->settings->instance;
 
 	if (count > 0)
 	{
@@ -207,6 +215,7 @@ BOOL TsProxyCreateTunnelReadResponse(rdpTsg* tsg, RPC_PDU* pdu)
 	PTSG_PACKET_VERSIONCAPS versionCaps;
 	PTSG_PACKET_CAPS_RESPONSE packetCapsResponse;
 	PTSG_PACKET_QUARENC_RESPONSE packetQuarEncResponse;
+    freerdp *instance = tsg->settings->instance;
 
 	if (!pdu)
 		return FALSE;
@@ -516,6 +525,7 @@ BOOL TsProxyCreateTunnel(rdpTsg* tsg, PTSG_PACKET tsgPacket, PTSG_PACKET* tsgPac
 	 * );
 	 */
 	DEBUG_TSG("");
+    freerdp *instance = tsg->settings->instance;
 
 	if (!TsProxyCreateTunnelWriteRequest(tsg))
 	{
@@ -586,6 +596,7 @@ BOOL TsProxyAuthorizeTunnelReadResponse(rdpTsg* tsg, RPC_PDU* pdu)
 	PTSG_PACKET packet;
 	rdpRpc* rpc = tsg->rpc;
 	PTSG_PACKET_RESPONSE packetResponse;
+    freerdp *instance = tsg->settings->instance;
 
 	if (!pdu)
 		return FALSE;
@@ -678,6 +689,7 @@ BOOL TsProxyAuthorizeTunnel(rdpTsg* tsg, PTUNNEL_CONTEXT_HANDLE_NOSERIALIZE tunn
 	 *
 	 */
 	DEBUG_TSG("");
+    freerdp *instance = tsg->settings->instance;
 
 	if (!TsProxyAuthorizeTunnelWriteRequest(tsg, tunnelContext))
 	{
@@ -731,6 +743,7 @@ BOOL TsProxyMakeTunnelCallReadResponse(rdpTsg* tsg, RPC_PDU* pdu)
 	PTSG_PACKET_MSG_RESPONSE packetMsgResponse;
 	PTSG_PACKET_STRING_MESSAGE packetStringMessage = NULL;
 	PTSG_PACKET_REAUTH_MESSAGE packetReauthMessage = NULL;
+    freerdp *instance = tsg->settings->instance;
 
 	/* This is an asynchronous response */
 
@@ -846,6 +859,7 @@ BOOL TsProxyMakeTunnelCall(rdpTsg* tsg, PTUNNEL_CONTEXT_HANDLE_NOSERIALIZE tunne
 	 * );
 	 */
 	DEBUG_TSG("");
+    freerdp *instance = tsg->settings->instance;
 
 	if (!TsProxyMakeTunnelCallWriteRequest(tsg, tunnelContext, procId))
 	{
@@ -945,6 +959,7 @@ BOOL TsProxyCreateChannel(rdpTsg* tsg, PTUNNEL_CONTEXT_HANDLE_NOSERIALIZE tunnel
 	 * );
 	 */
 	DEBUG_TSG("");
+    freerdp *instance = tsg->settings->instance;
 
 	if (!TsProxyCreateChannelWriteRequest(tsg, tunnelContext))
 	{
@@ -1006,6 +1021,7 @@ HRESULT TsProxyCloseChannel(rdpTsg* tsg, PCHANNEL_CONTEXT_HANDLE_NOSERIALIZE* co
 	 * );
 	 */
 	DEBUG_TSG("");
+    freerdp *instance = tsg->settings->instance;
 
 	if (!TsProxyCloseChannelWriteRequest(tsg, context))
 	{
@@ -1073,6 +1089,7 @@ HRESULT TsProxyCloseTunnel(rdpTsg* tsg, PTUNNEL_CONTEXT_HANDLE_SERIALIZE* contex
 	 * );
 	 */
 	DEBUG_TSG("");
+    freerdp *instance = tsg->settings->instance;
 
 	if (!TsProxyCloseTunnelWriteRequest(tsg, context))
 	{
@@ -1126,6 +1143,7 @@ BOOL TsProxySetupReceivePipe(handle_t IDL_handle, BYTE* pRpcMessage)
 	 */
 	tsg = (rdpTsg*) IDL_handle;
 	DEBUG_TSG("");
+    freerdp *instance = tsg->settings->instance;
 
 	if (!TsProxySetupReceivePipeWriteRequest(tsg))
 	{
@@ -1142,6 +1160,7 @@ BOOL tsg_connect(rdpTsg* tsg, const char* hostname, UINT16 port)
 	RpcClientCall* call;
 	rdpRpc* rpc = tsg->rpc;
 	rdpSettings* settings = rpc->settings;
+    freerdp *instance = tsg->settings->instance;
 
 	tsg->Port = port;
 
@@ -1427,6 +1446,7 @@ int tsg_read(rdpTsg* tsg, BYTE* data, UINT32 length)
 		return -1;
 
 	rpc = tsg->rpc;
+    freerdp *instance = tsg->settings->instance;
 
 	if (rpc->transport->layer == TRANSPORT_LAYER_CLOSED)
 	{
@@ -1499,6 +1519,7 @@ int tsg_read(rdpTsg* tsg, BYTE* data, UINT32 length)
 int tsg_write(rdpTsg* tsg, BYTE* data, UINT32 length)
 {
 	int status;
+    freerdp *instance = tsg->settings->instance;
 
 	if (tsg->rpc->transport->layer == TRANSPORT_LAYER_CLOSED)
 	{

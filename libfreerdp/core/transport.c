@@ -57,6 +57,13 @@
 
 #define TAG FREERDP_TAG("core.transport")
 
+//Remoter-Start
+#undef WLog_ERR
+#define WLog_ERR(TAG,...) freerdp_log(transport->settings->instance,"ERROR",TAG,__VA_ARGS__)
+#undef WLog_INFO
+#define WLog_INFO(TAG,...) freerdp_log(transport->settings->instance,"INFO",TAG,__VA_ARGS__)
+//Remoter-End
+
 #define BUFFER_SIZE 16384
 
 static void* transport_client_thread(void* arg);
@@ -453,7 +460,7 @@ BOOL transport_connect(rdpTransport* transport, const char* hostname, UINT16 por
 	{
 		transport->layer = TRANSPORT_LAYER_TSG;
 		transport->SplitInputOutput = TRUE;
-		transport->TcpOut = freerdp_tcp_new(settings);
+		transport->TcpOut = freerdp_tcp_new(settings->instance);
 
 		if (!freerdp_tcp_connect(transport->TcpIn, settings->GatewayHostname, settings->GatewayPort, timeout) ||
 				!freerdp_tcp_set_blocking_mode(transport->TcpIn, FALSE))
@@ -1161,7 +1168,7 @@ static void* transport_client_thread(void* arg)
 rdpTransport* transport_new(rdpContext* context)
 {
 	rdpTransport* transport;
-
+    
 	transport = (rdpTransport*) calloc(1, sizeof(rdpTransport));
 
 	if (!transport)
@@ -1176,7 +1183,7 @@ rdpTransport* transport_new(rdpContext* context)
 	if (!transport->log)
 		goto out_free;
 
-	transport->TcpIn = freerdp_tcp_new(context->settings);
+	transport->TcpIn = freerdp_tcp_new(transport->settings->instance);
 
 	if (!transport->TcpIn)
 		goto out_free;

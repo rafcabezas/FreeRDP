@@ -24,9 +24,11 @@
 extern "C" { 
 #endif 
 
+#ifndef _FSBLKCNT_T
 typedef unsigned long long fsblkcnt_t;
 typedef unsigned long long fsfilcnt_t;
-
+#endif
+    
 struct statvfs {
     unsigned long  f_bsize;    /* file system block size */
     unsigned long  f_frsize;   /* fragment size */

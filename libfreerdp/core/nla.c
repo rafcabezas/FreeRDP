@@ -430,6 +430,7 @@ int credssp_server_authenticate(rdpCredssp* credssp)
 
 	if (credssp->SspiModule)
 	{
+#ifdef WITH_NATIVE_SSPI
 		HMODULE hSSPI;
 		INIT_SECURITY_INTERFACE pInitSecurityInterface;
 		hSSPI = LoadLibrary(credssp->SspiModule);
@@ -446,6 +447,7 @@ int credssp_server_authenticate(rdpCredssp* credssp)
 		pInitSecurityInterface = (INIT_SECURITY_INTERFACE) GetProcAddress(hSSPI, "InitSecurityInterfaceA");
 #endif
 		credssp->table = pInitSecurityInterface();
+#endif
 	}
 	else
 	{

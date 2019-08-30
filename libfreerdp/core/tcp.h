@@ -30,6 +30,7 @@
 #include <winpr/synch.h>
 #include <winpr/stream.h>
 #include <winpr/winsock.h>
+#include "freerdp.h"
 
 #include <freerdp/utils/ringbuffer.h>
 #include <openssl/bio.h>
@@ -69,7 +70,7 @@ BOOL freerdp_tcp_set_keep_alive_mode(rdpTcp* tcp);
 int freerdp_tcp_attach(rdpTcp* tcp, int sockfd);
 HANDLE freerdp_tcp_get_event_handle(rdpTcp* tcp);
 
-rdpTcp* freerdp_tcp_new(rdpSettings* settings);
+rdpTcp* freerdp_tcp_new(freerdp* instance);
 void freerdp_tcp_free(rdpTcp* tcp);
 
 #endif /* __TCP_H */

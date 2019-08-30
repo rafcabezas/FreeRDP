@@ -509,6 +509,14 @@ static void* rpc_client_thread(void* arg)
 
 	while (rpc->transport->layer != TRANSPORT_LAYER_CLOSED)
 	{
+        //Remoter-Start
+        // break on disconnect
+        freerdp *instance = (freerdp*) rpc->settings->instance;
+        if (instance && instance->context && instance->context->rdp && instance->context->rdp->disconnect) {
+            break;
+        }
+        //Remoter-End
+
 		status = WaitForMultipleObjects(nCount, events, FALSE, 100);
 
 		if (status == WAIT_TIMEOUT)
@@ -528,6 +536,12 @@ static void* rpc_client_thread(void* arg)
 			rpc_send_dequeue_pdu(rpc);
 		}
 	}
+
+    //Remoter-Start
+    // Force main rdp thread WaitForSingleObject to abort:
+    CloseHandle(rpc->client->ReceiveQueue->event);
+    rpc->client->ReceiveQueue->event = NULL;
+    //Remoter-End
 
 out:
 	CloseHandle(ReadEvent);

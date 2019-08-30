@@ -85,6 +85,13 @@
 
 #define TAG FREERDP_TAG("core")
 
+//Remoter-Start
+#undef WLog_ERR
+#define WLog_ERR(TAG,...) freerdp_log(tcp->settings->instance,"ERROR",TAG,__VA_ARGS__)
+#undef WLog_INFO
+#define WLog_INFO(TAG,...) freerdp_log(tcp->settings->instance,"INFO",TAG,__VA_ARGS__)
+//Remoter-End
+
 /* Simple Socket BIO */
 
 static int transport_bio_simple_new(BIO* bio);
@@ -499,7 +506,7 @@ void freerdp_tcp_get_mac_address(rdpTcp* tcp)
 		mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]); */
 }
 
-int uds_connect(const char* path)
+int uds_connect(rdpTcp* tcp, const char* path)
 {
 #ifndef _WIN32
 	int status;
@@ -531,7 +538,7 @@ int uds_connect(const char* path)
 #endif
 }
 
-BOOL freerdp_tcp_resolve_hostname(const char* hostname)
+BOOL freerdp_tcp_resolve_hostname(rdpTcp* tcp, const char* hostname)
 {
 	int status;
 	struct addrinfo hints = { 0 };
@@ -550,7 +557,7 @@ BOOL freerdp_tcp_resolve_hostname(const char* hostname)
 	return TRUE;
 }
 
-BOOL freerdp_tcp_connect_timeout(int sockfd, struct sockaddr* addr, socklen_t addrlen, int timeout)
+BOOL freerdp_tcp_connect_timeout(rdpTcp* tcp, int sockfd, struct sockaddr* addr, socklen_t addrlen, int timeout)
 {
 	int status;
 
@@ -815,7 +822,7 @@ BOOL freerdp_tcp_connect(rdpTcp* tcp, const char* hostname, int port, int timeou
 
 	if (tcp->ipcSocket)
 	{
-		tcp->sockfd = uds_connect(hostname);
+		tcp->sockfd = uds_connect(tcp, hostname);
 
 		if (tcp->sockfd < 0)
 			return FALSE;
@@ -854,7 +861,7 @@ BOOL freerdp_tcp_connect(rdpTcp* tcp, const char* hostname, int port, int timeou
 
 		if (!settings->GatewayEnabled)
 		{
-			if (!freerdp_tcp_resolve_hostname(hostname))
+			if (!freerdp_tcp_resolve_hostname(tcp, hostname))
 			{
 				if (settings->TargetNetAddressCount > 0)
 				{
@@ -907,7 +914,7 @@ BOOL freerdp_tcp_connect(rdpTcp* tcp, const char* hostname, int port, int timeou
 				return FALSE;
 			}
 
-			if (!freerdp_tcp_connect_timeout(tcp->sockfd, addr->ai_addr, addr->ai_addrlen, timeout))
+			if (!freerdp_tcp_connect_timeout(tcp, tcp->sockfd, addr->ai_addr, addr->ai_addrlen, timeout))
 			{
 				fprintf(stderr, "failed to connect to %s\n", hostname);
 				freeaddrinfo(result);
@@ -1220,7 +1227,7 @@ int freerdp_tcp_wait_write(rdpTcp* tcp, DWORD dwMilliSeconds)
 	return status;
 }
 
-rdpTcp* freerdp_tcp_new(rdpSettings* settings)
+rdpTcp* freerdp_tcp_new(freerdp* instance)
 {
 	rdpTcp* tcp;
 
@@ -1233,7 +1240,7 @@ rdpTcp* freerdp_tcp_new(rdpSettings* settings)
 		goto out_free;
 
 	tcp->sockfd = -1;
-	tcp->settings = settings;
+	tcp->settings = instance->settings;
 
 	if (0)
 		goto out_ringbuffer; /* avoid unreferenced label warning on Windows */

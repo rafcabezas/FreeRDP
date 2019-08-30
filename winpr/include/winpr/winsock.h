@@ -77,7 +77,9 @@ PCSTR inet_ntop(INT Family, PVOID pAddr, PSTR pStringBuf, size_t StringBufSize);
 #include <winpr/error.h>
 #include <winpr/platform.h>
 
+#ifndef SOCKET
 typedef UINT_PTR SOCKET;
+#endif
 typedef struct sockaddr_storage SOCKADDR_STORAGE;
 
 #ifndef INVALID_SOCKET

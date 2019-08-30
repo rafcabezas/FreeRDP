@@ -36,6 +36,13 @@
 
 #define TAG FREERDP_TAG("core.connection")
 
+//Remoter-Start
+#undef WLog_ERR
+#define WLog_ERR(TAG,...) freerdp_log(rdp->instance,"ERROR",TAG,__VA_ARGS__)
+#undef WLog_INFO
+#define WLog_INFO(TAG,...) freerdp_log(rdp->instance,"INFO",TAG,__VA_ARGS__)
+//Remoter-End
+
 /**
  *                                      Connection Sequence
  *     client                                                                    server
@@ -303,7 +310,7 @@ BOOL rdp_client_connect(rdpRdp* rdp)
 
 	while (rdp->state != CONNECTION_STATE_ACTIVE)
 	{
-		if (rdp_check_fds(rdp) < 0)
+		if (rdp->disconnect || rdp_check_fds(rdp) < 0) //Remoter: check for disconnect as well
 		{
 			if (!freerdp_get_last_error(rdp->context))
 			{

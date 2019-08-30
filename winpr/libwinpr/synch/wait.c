@@ -69,7 +69,7 @@
 
 #include "../pipe/pipe.h"
 
-#ifdef __MACH__
+#if defined(__MACH__) && !defined(CLOCK_REALTIME)
 
 #include <mach/mach_time.h>
 
