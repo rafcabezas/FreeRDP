@@ -68,7 +68,7 @@
 #include "../pipe/pipe.h"
 
 /* clock_gettime is not implemented on OSX prior to 10.12 */
-#ifdef __MACH__
+#if defined(__MACH__) && !defined(CLOCK_REALTIME)
 
 #include <mach/mach_time.h>
 

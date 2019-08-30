@@ -1,8 +1,9 @@
 /**
  * FreeRDP: A Remote Desktop Protocol Implementation
- * Channel Addins
+ * Version includes
  *
- * Copyright 2012 Marc-Andre Moreau <marcandre.moreau@gmail.com>
+ * Copyright 2013 Thincast Technologies GmbH
+ * Copyright 2013 Bernhard Miklautz <bernhard.miklautz@thincast.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,5 +17,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef _FREERDP_VERSION_H_
+#define _FREERDP_VERSION_H_
 
-#define CMAKE_SHARED_LIBRARY_PREFIX ""
+#define FREERDP_VERSION_MAJOR 1
+#define FREERDP_VERSION_MINOR 2
+#define FREERDP_VERSION_REVISION 0
+#define FREERDP_VERSION_SUFFIX "${FREERDP_VERSION_SUFFIX}"
+#define FREERDP_API_VERSION "${FREERDP_API_VERSION}"
+#define FREERDP_VERSION "${FREERDP_VERSION}"
+#define FREERDP_VERSION_FULL "${FREERDP_VERSION_FULL}"
+#define GIT_REVISION "72f38ce75a86095b831a01cd3606ec77b81dd444"
+
+#endif // _FREERDP_VERSION_H_

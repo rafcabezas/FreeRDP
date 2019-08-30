@@ -840,6 +840,7 @@ static COMMAND_LINE_ARGUMENT_A rdpsnd_args[] =
 	{ "channel", COMMAND_LINE_VALUE_REQUIRED, "<channel>", NULL, NULL, -1, NULL, "channel" },
 	{ "latency", COMMAND_LINE_VALUE_REQUIRED, "<latency>", NULL, NULL, -1, NULL, "latency" },
 	{ "quality", COMMAND_LINE_VALUE_REQUIRED, "<quality mode>", NULL, NULL, -1, NULL, "quality mode" },
+    { "remoter_connector", COMMAND_LINE_VALUE_REQUIRED, "<uuid>", NULL, NULL, -1, NULL, "internal" },
 	{ NULL, 0, NULL, NULL, NULL, -1, NULL, NULL }
 };
 

@@ -94,7 +94,10 @@ WINPR_API INT winpr_inet_pton(INT Family, PCSTR pszAddrString, PVOID pAddrBuf);
 #define WSAOVERLAPPED	OVERLAPPED
 typedef OVERLAPPED*	LPWSAOVERLAPPED;
 
+#ifndef SOCKET
 typedef UINT_PTR SOCKET;
+#endif
+
 typedef struct sockaddr_storage SOCKADDR_STORAGE;
 
 #ifndef INVALID_SOCKET

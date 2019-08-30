@@ -39,6 +39,13 @@
 
 #define TAG FREERDP_TAG("core.connection")
 
+//Remoter-Start
+#undef WLog_ERR
+#define WLog_ERR(TAG,...) freerdp_log(rdp->instance,"ERROR",TAG,__VA_ARGS__)
+#undef WLog_INFO
+#define WLog_INFO(TAG,...) freerdp_log(rdp->instance,"INFO",TAG,__VA_ARGS__)
+//Remoter-End
+
 /**
  *                                      Connection Sequence
  *     client                                                                    server
@@ -383,9 +390,12 @@ BOOL rdp_client_redirect(rdpRdp* rdp)
 			return FALSE;
 	}
 
-	status = rdp_client_connect(rdp);
+    // Remoter: Start a new SSH redirection if necessary.
+    // This blocks until the new port forward is ready
+    remoterRDPProcessRedirection(settings->instance);
 
-	return status;
+    status = rdp_client_connect(rdp);
+    return status;
 }
 
 BOOL rdp_client_reconnect(rdpRdp* rdp)

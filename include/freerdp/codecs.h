@@ -22,7 +22,9 @@
 
 #include <freerdp/api.h>
 
+#ifndef __COLORPICKER__
 #include <freerdp/codec/color.h>
+#endif
 
 #include <freerdp/codec/rfx.h>
 #include <freerdp/codec/nsc.h>

@@ -46,6 +46,12 @@
 
 #define TAG FREERDP_TAG("crypto")
 
+//Remoter-Start
+#undef WLog_ERR
+#define WLog_ERR(TAG,...) freerdp_log(tls->settings->instance,"ERROR",TAG,__VA_ARGS__)
+#undef WLog_INFO
+#define WLog_INFO(TAG,...) freerdp_log(tls->settings->instance,"INFO",TAG,__VA_ARGS__)
+//Remoter-End
 
 
 /**
@@ -1305,7 +1311,7 @@ int tls_verify_certificate(rdpTls* tls, CryptoCert cert, char* hostname,
 			/* no entry was found in known_hosts file, prompt user for manual verification */
 			if (!hostname_match)
 				tls_print_certificate_name_mismatch_error(
-				    hostname, port,
+				    tls, hostname, port,
 				    common_name, alt_names,
 				    alt_names_count);
 
@@ -1348,7 +1354,7 @@ int tls_verify_certificate(rdpTls* tls, CryptoCert cert, char* hostname,
 			char* old_issuer = NULL;
 			char* old_fingerprint = NULL;
 			/* entry was found in known_hosts file, but fingerprint does not match. ask user to use it */
-			tls_print_certificate_error(hostname, port, fingerprint,
+			tls_print_certificate_error(tls, hostname, port, fingerprint,
 			                            tls->certificate_store->file);
 
 			if (!certificate_get_stored_data(tls->certificate_store,
@@ -1406,7 +1412,7 @@ int tls_verify_certificate(rdpTls* tls, CryptoCert cert, char* hostname,
 	return (verification_status == 0) ? 0 : 1;
 }
 
-void tls_print_certificate_error(char* hostname, UINT16 port, char* fingerprint,
+void tls_print_certificate_error(rdpTls* tls, char* hostname, UINT16 port, char* fingerprint,
                                  char* hosts_file)
 {
 	WLog_ERR(TAG, "The host key for %s:%"PRIu16" has changed", hostname, port);
@@ -1428,7 +1434,7 @@ void tls_print_certificate_error(char* hostname, UINT16 port, char* fingerprint,
 	WLog_ERR(TAG, "Host key verification failed.");
 }
 
-void tls_print_certificate_name_mismatch_error(char* hostname, UINT16 port,
+void tls_print_certificate_name_mismatch_error(rdpTls* tls, char* hostname, UINT16 port,
         char* common_name, char** alt_names,
         int alt_names_count)
 {

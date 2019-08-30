@@ -2,7 +2,6 @@
 CMakeFiles/
 CMakeScripts/
 CMakeCache.txt
-config.h
 install_manifest*.txt
 CTestTestfile.cmake
 *.pc
@@ -19,9 +18,6 @@ LICENSE.txt
 !external/README
 *Config.cmake
 *ConfigVersion.cmake
-include/freerdp/version.h
-include/freerdp/build-config.h
-buildflags.h
 
 *.a.objlist.cmake
 *.a.objlist

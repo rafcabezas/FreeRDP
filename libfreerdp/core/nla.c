@@ -45,6 +45,8 @@
 
 #include "nla.h"
 
+#define REMOTER_MAX_SUPPORTED_NLA_VERSION 3
+
 #define TAG FREERDP_TAG("core.nla")
 
 #define SERVER_KEY "Software\\"FREERDP_VENDOR_STRING"\\" \
@@ -600,6 +602,7 @@ int nla_server_init(rdpNla* nla)
 
 	if (nla->SspiModule)
 	{
+#ifdef WITH_NATIVE_SSPI
 		HMODULE hSSPI;
 		INIT_SECURITY_INTERFACE pInitSecurityInterface;
 
@@ -617,6 +620,7 @@ int nla_server_init(rdpNla* nla)
 		pInitSecurityInterface = (INIT_SECURITY_INTERFACE) GetProcAddress(hSSPI, "InitSecurityInterfaceA");
 #endif
 		nla->table = pInitSecurityInterface();
+#endif
 	}
 	else
 	{
@@ -1515,6 +1519,9 @@ int nla_decode_ts_request(rdpNla* nla, wStream* s)
 	{
 		return -1;
 	}
+    
+    //Remoter:
+    nla->version = MIN(nla->version, REMOTER_MAX_SUPPORTED_NLA_VERSION);
 
 	/* [1] negoTokens (NegoData) */
 	if (ber_read_contextual_tag(s, 1, &length, TRUE) != FALSE)
@@ -1744,7 +1751,7 @@ rdpNla* nla_new(freerdp* instance, rdpTransport* transport, rdpSettings* setting
 	nla->transport = transport;
 	nla->sendSeqNum = 0;
 	nla->recvSeqNum = 0;
-	nla->version = 3;
+	nla->version = REMOTER_MAX_SUPPORTED_NLA_VERSION;
 
 	if (settings->NtlmSamFile)
 	{
