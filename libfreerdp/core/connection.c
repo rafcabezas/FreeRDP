@@ -300,7 +300,7 @@ BOOL rdp_client_connect(rdpRdp* rdp)
 
 	while (rdp->state != CONNECTION_STATE_ACTIVE)
 	{
-		if (rdp_check_fds(rdp) < 0)
+		if (rdp->disconnect || rdp_check_fds(rdp) < 0)
 		{
 			if (!freerdp_get_last_error(rdp->context))
 			{

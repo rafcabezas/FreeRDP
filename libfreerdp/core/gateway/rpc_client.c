@@ -511,6 +511,7 @@ static void* rpc_client_thread(void* arg)
 	int fd;
 
 	rpc = (rdpRpc*) arg;
+    freerdp* instance = (freerdp*) rpc->settings->instance;
 	fd = BIO_get_fd(rpc->TlsOut->bio, NULL);
 
 	ReadEvent = CreateFileDescriptorEvent(NULL, TRUE, FALSE, fd);
@@ -533,6 +534,11 @@ static void* rpc_client_thread(void* arg)
 
 	while (rpc->transport->layer != TRANSPORT_LAYER_CLOSED)
 	{
+        instance = (freerdp*) rpc->settings->instance;
+        if (instance && instance->context && instance->context->rdp && instance->context->rdp->disconnect) {
+            break;
+        }
+
 		status = WaitForMultipleObjects(nCount, events, FALSE, 100);
 
 		if (status == WAIT_TIMEOUT)
@@ -552,6 +558,10 @@ static void* rpc_client_thread(void* arg)
 			rpc_send_dequeue_pdu(rpc);
 		}
 	}
+
+    // Force main rdp thread WaitForSingleObject to abort:
+    CloseHandle(rpc->client->ReceiveQueue->event);
+    rpc->client->ReceiveQueue->event = NULL;
 
 out:
 	CloseHandle(ReadEvent);
