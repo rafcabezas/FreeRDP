@@ -21,6 +21,8 @@
 #include "config.h"
 #endif
 
+#ifdef WITH_SSE2 // Remoter change
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -403,3 +405,5 @@ void nsc_init_sse2(NSC_CONTEXT* context)
 	IF_PROFILER(context->priv->prof_nsc_encode->name = "nsc_encode_sse2");
 	context->encode = nsc_encode_sse2;
 }
+
+#endif

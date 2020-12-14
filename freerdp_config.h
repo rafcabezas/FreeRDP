@@ -62,7 +62,9 @@ void remoterRDPProcessRedirection(void *instance);
 //#define OPENSSL_NO_TLSEXT
 
 #if IS_TARGET_OSX==1
+#if defined(__x86_64__)
 #define WITH_SSE2
+#endif
 #endif
 #define WITH_JPEG
 

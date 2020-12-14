@@ -22,6 +22,8 @@
 #include "config.h"
 #endif
 
+#ifdef WITH_SSE2 // Remoter change
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,6 +38,8 @@
 #ifdef _MSC_VER
 #define	__attribute__(...)
 #endif
+
+#if defined(__x86_64__) //Remoter change
 
 #define CACHE_LINE_BYTES	64
 
@@ -508,3 +512,6 @@ void rfx_init_sse2(RFX_CONTEXT* context)
 	context->dwt_2d_decode = rfx_dwt_2d_decode_sse2;
 	context->dwt_2d_encode = rfx_dwt_2d_encode_sse2;
 }
+#endif
+
+#endif
